@@ -1,0 +1,80 @@
+<!-- templates/home.html -->
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12 text-center my-5">
+            <h1>Welcome to Android Coach</h1>
+            <p class="lead">Your comprehensive sports training and management platform</p>
+        </div>
+    </div>
+
+    {% if not user.is_authenticated %}
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Get Started</h5>
+                    <p class="card-text">Join Android Coach to streamline your sports training management</p>
+                    <div class="d-flex justify-content-center gap-3">
+                        <a href="{% url 'login' %}" class="btn btn-primary">Login</a>
+                        <a href="{% url 'register' %}" class="btn btn-success">Register</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">Dashboard</div>
+                <div class="card-body">
+                    <h5>Welcome, {{ user.username }}!</h5>
+                    
+                    {% if user.role == 'athlete' %}
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h6 class="card-title">Performance</h6>
+                                    <a href="{% url 'log_performance' %}" class="btn btn-outline-primary">Log Performance</a>
+                                    <a href="{% url 'performance_history' %}" class="btn btn-outline-secondary mt-2">View History</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h6 class="card-title">Goals</h6>
+                                    <a href="{% url 'set_goal' %}" class="btn btn-outline-primary">Set New Goal</a>
+                                    <a href="{% url 'goal_list' %}" class="btn btn-outline-secondary mt-2">My Goals</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if user.role == 'coach' %}
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h6 class="card-title">Training Sessions</h6>
+                                    <a href="{% url 'create_training_session' %}" class="btn btn-outline-primary">Create Session</a>
+                                    <a href="{% url 'training_session_list' %}" class="btn btn-outline-secondary mt-2">View Sessions</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
