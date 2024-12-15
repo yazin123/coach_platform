@@ -134,7 +134,24 @@ class Goal(models.Model):
     goal_type = models.CharField(max_length=50)
     description = models.TextField()
     target_date = models.DateField()
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('in_progress', 'In Progress'),
+        ('achieved', 'Achieved'),
+        ('abandoned', 'Abandoned')
+    )
+    status = models.CharField(
+        max_length=20, 
+        choices=STATUS_CHOICES, 
+        default='pending'
+    )
+
 
     def __str__(self):
         return f"{self.athlete.full_name} - {self.goal_type}"
+
+
+
+def get_role_display(self):
+    role_dict = dict(self.ROLE_CHOICES)
+    return role_dict.get(self.role, self.role)
