@@ -1,0 +1,29 @@
+<!-- templates/training/session_detail.html -->
+{% extends 'base.html' %}
+
+{% block title %}Training Session Details{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">Training Session Details</div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h5>Session Information</h5>
+                <p><strong>Athlete:</strong> {{ session.athlete.full_name }}</p>
+                <p><strong>Coach:</strong> {{ session.coach.full_name }}</p>
+                <p><strong>Date:</strong> {{ session.session_date }}</p>
+                <p><strong>Type:</strong> {{ session.session_type }}</p>
+                <p><strong>Status:</strong> {{ session.get_status_display }}</p>
+            </div>
+            <div class="col-md-6">
+                <h5>Description</h5>
+                <p>{{ session.description }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="card-footer">
+        <a href="{% url 'training_session_list' %}" class="btn btn-secondary">Back to Sessions</a>
+    </div>
+</div>
+{% endblock %}

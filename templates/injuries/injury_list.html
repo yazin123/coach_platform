@@ -1,0 +1,422 @@
+{% extends 'base.html' %}
+
+{% block title %}Injuries - Athletic Coach{% endblock %}
+
+{% block extra_css %}
+<style>
+    .injury-card {
+        border-left: 5px solid;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .injury-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+    
+    .injury-active { border-left-color: #e74c3c; }
+    .injury-recovering { border-left-color: #f39c12; }
+    .injury-resolved { border-left-color: #2ecc71; }
+    
+    .status-badge {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+    }
+    
+    .days-remaining {
+        font-size: 0.9rem;
+    }
+    
+    .days-remaining.overdue {
+        color: #e74c3c;
+        font-weight: bold;
+    }
+    
+    .recovery-progress {
+        height: 8px;
+        margin-bottom: 10px;
+        border-radius: 10px;
+    }
+    
+    .filter-box {
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h2 class="mb-0"><i class="fas fa-heartbeat me-2"></i>Injuries</h2>
+        <p class="text-muted">
+            {% if user.role == 'physio' %}
+                Manage athlete injuries and track recovery progress.
+            {% elif user.role == 'coach' %}
+                View athlete injuries and recovery status.
+            {% else %}
+                Track your injury history and recovery progress.
+            {% endif %}
+        </p>
+    </div>
+    <div class="col-md-6 text-md-end">
+        {% if user.role == 'physio' %}
+            <a href="{% url 'add_injury' %}" class="btn btn-success">
+                <i class="fas fa-plus me-1"></i> Record New Injury
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Injury Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-danger text-white h-100">
+            <div class="card-body text-center">
+                <h1 class="display-4 mb-0" id="active-injuries">{{ active_count|default:0 }}</h1>
+                <p class="lead">Active</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white h-100">
+            <div class="card-body text-center">
+                <h1 class="display-4 mb-0" id="recovering-injuries">{{ recovering_count|default:0 }}</h1>
+                <p class="lead">Recovering</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white h-100">
+            <div class="card-body text-center">
+                <h1 class="display-4 mb-0" id="resolved-injuries">{{ resolved_count|default:0 }}</h1>
+                <p class="lead">Resolved</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white h-100">
+            <div class="card-body text-center">
+                <h1 class="display-4 mb-0" id="avg-recovery-time">{{ avg_recovery_days|default:'--' }}</h1>
+                <p class="lead">Avg. Recovery (Days)</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="mb-3"><i class="fas fa-filter me-2"></i>Filters</h5>
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Status</label>
+                        <div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input filter-status" type="checkbox" id="status-active" value="active" checked>
+                                <label class="form-check-label" for="status-active">Active</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input filter-status" type="checkbox" id="status-recovering" value="recovering" checked>
+                                <label class="form-check-label" for="status-recovering">Recovering</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input filter-status" type="checkbox" id="status-resolved" value="resolved">
+                                <label class="form-check-label" for="status-resolved">Resolved</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3 mb-3">
+                        <label for="athlete-filter" class="form-label">Athlete</label>
+                        <select class="form-select" id="athlete-filter">
+                            <option value="all" selected>All Athletes</option>
+                            {% for athlete in athletes %}
+                                <option value="{{ athlete.id }}">{{ athlete.full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3 mb-3">
+                        <label for="injury-type-filter" class="form-label">Injury Type</label>
+                        <select class="form-select" id="injury-type-filter">
+                            <option value="all" selected>All Types</option>
+                            {% for type in injury_types %}
+                                <option value="{{ type }}">{{ type }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3 mb-3">
+                        <label for="date-filter" class="form-label">Date Range</label>
+                        <select class="form-select" id="date-filter">
+                            <option value="all" selected>All Time</option>
+                            <option value="30">Last 30 Days</option>
+                            <option value="90">Last 3 Months</option>
+                            <option value="180">Last 6 Months</option>
+                            <option value="365">Last Year</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-end">
+                    <button type="button" id="apply-filters" class="btn btn-primary">
+                        <i class="fas fa-filter me-1"></i> Apply Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Injuries List -->
+<div class="row" id="injuries-container">
+    {% if injuries %}
+        {% for injury in injuries %}
+            <div class="col-md-6 mb-4 injury-item" 
+                 data-status="{{ injury.status }}" 
+                 data-athlete="{{ injury.athlete.id }}"
+                 data-type="{{ injury.injury_type }}"
+                 data-date="{{ injury.injury_date|date:'Y-m-d' }}">
+                <div class="card injury-card h-100 injury-{{ injury.status }}">
+                    <div class="card-body">
+                        <span class="status-badge badge {% if injury.status == 'active' %}bg-danger{% elif injury.status == 'recovering' %}bg-warning{% else %}bg-success{% endif %}">
+                            {{ injury.get_status_display }}
+                        </span>
+                        <h5 class="card-title">{{ injury.injury_type }}</h5>
+                        
+                        <p class="text-muted mb-1">
+                            <i class="fas fa-user me-1"></i> {{ injury.athlete.full_name }}
+                            {% if injury.physiotherapist %}
+                                <span class="ms-3"><i class="fas fa-user-md me-1"></i> {{ injury.physiotherapist.full_name }}</span>
+                            {% endif %}
+                        </p>
+                        
+                        <p class="text-muted mb-3">
+                            <i class="fas fa-calendar-day me-1"></i> Injury Date: {{ injury.injury_date|date:"M d, Y" }}
+                        </p>
+                        
+                        {% if injury.status != 'resolved' %}
+                            <div class="progress recovery-progress">
+                                <div class="progress-bar {% if injury.status == 'active' %}bg-danger{% else %}bg-warning{% endif %}" 
+                                     role="progressbar" 
+                                     style="width: {{ injury.recovery_progress|default:0 }}%;" 
+                                     aria-valuenow="{{ injury.recovery_progress|default:0 }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                </div>
+                            </div>
+                            
+                            {% if injury.days_until_recovery < 0 %}
+                                <p class="days-remaining overdue">
+                                    <i class="fas fa-exclamation-triangle me-1"></i> Recovery overdue by <span class="days-overdue">{{ injury.days_until_recovery }}</span> days
+                                </p>
+                            {% elif injury.days_until_recovery <= 7 %}
+                                <p class="days-remaining overdue">
+                                    <i class="fas fa-clock me-1"></i> {{ injury.days_until_recovery }} days to expected recovery
+                                </p>
+                            {% else %}
+                                <p class="days-remaining">
+                                    <i class="fas fa-calendar-alt me-1"></i> {{ injury.days_until_recovery }} days to expected recovery
+                                </p>
+                            {% endif %}
+                        {% endif %}
+                        
+                        <p class="card-text">{{ injury.description|truncatechars:100 }}</p>
+                        
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <a href="{% url 'injury_detail' injury.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye me-1"></i> View Details
+                            </a>
+                            
+                            {% if user.role == 'physio' %}
+                                <div>
+                                    <a href="{% url 'update_injury' injury.id %}" class="btn btn-sm btn-outline-secondary me-1">
+                                        <i class="fas fa-edit me-1"></i> Update
+                                    </a>
+                                    
+                                    {% if injury.status != 'resolved' %}
+                                        <a href="{% url 'mark_injury_resolved' injury.id %}" class="btn btn-sm btn-outline-success">
+                                            <i class="fas fa-check me-1"></i> Mark Resolved
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="col-md-12">
+            <div class="text-center py-5">
+                <i class="fas fa-heartbeat fa-3x mb-3 text-muted"></i>
+                <h5>No injuries recorded</h5>
+                <p class="text-muted">
+                    {% if user.role == 'physio' %}
+                        Start by recording a new injury.
+                    {% else %}
+                        There are no injuries recorded at this time.
+                    {% endif %}
+                </p>
+                
+                {% if user.role == 'physio' %}
+                    <a href="{% url 'add_injury' %}" class="btn btn-primary mt-2">
+                        <i class="fas fa-plus me-1"></i> Record New Injury
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initial count calculation
+        const injuries = document.querySelectorAll('.injury-item');
+        
+        // Fix for days overdue (similar to the abs filter fix)
+        document.querySelectorAll('.days-overdue').forEach(el => {
+            const days = parseInt(el.textContent);
+            if (days < 0) {
+                el.textContent = Math.abs(days);
+            }
+        });
+        
+        // Apply filters functionality
+        const applyFiltersBtn = document.getElementById('apply-filters');
+        const statusFilters = document.querySelectorAll('.filter-status');
+        const athleteFilter = document.getElementById('athlete-filter');
+        const injuryTypeFilter = document.getElementById('injury-type-filter');
+        const dateFilter = document.getElementById('date-filter');
+        
+        applyFiltersBtn.addEventListener('click', function() {
+            // Get selected status filters
+            const selectedStatuses = [];
+            statusFilters.forEach(filter => {
+                if (filter.checked) {
+                    selectedStatuses.push(filter.value);
+                }
+            });
+            
+            const selectedAthlete = athleteFilter.value;
+            const selectedType = injuryTypeFilter.value;
+            const selectedDateRange = dateFilter.value;
+            
+            let activeCount = 0;
+            let recoveringCount = 0;
+            let resolvedCount = 0;
+            
+            // Apply filters to all injury items
+            injuries.forEach(injury => {
+                const status = injury.getAttribute('data-status');
+                const athlete = injury.getAttribute('data-athlete');
+                const type = injury.getAttribute('data-type');
+                const date = new Date(injury.getAttribute('data-date'));
+                
+                // Determine if item matches filters
+                let isVisible = true;
+                
+                // Status filter
+                if (selectedStatuses.length > 0 && !selectedStatuses.includes(status)) {
+                    isVisible = false;
+                }
+                
+                // Athlete filter
+                if (selectedAthlete !== 'all' && athlete !== selectedAthlete) {
+                    isVisible = false;
+                }
+                
+                // Type filter
+                if (selectedType !== 'all' && type !== selectedType) {
+                    isVisible = false;
+                }
+                
+                // Date filter
+                if (selectedDateRange !== 'all') {
+                    const today = new Date();
+                    const dayDiff = Math.round((today - date) / (1000 * 60 * 60 * 24));
+                    
+                    if (dayDiff > parseInt(selectedDateRange)) {
+                        isVisible = false;
+                    }
+                }
+                
+                // Show or hide based on filter results
+                injury.style.display = isVisible ? '' : 'none';
+                
+                // Update counters for visible items
+                if (isVisible) {
+                    if (status === 'active') {
+                        activeCount++;
+                    } else if (status === 'recovering') {
+                        recoveringCount++;
+                    } else if (status === 'resolved') {
+                        resolvedCount++;
+                    }
+                }
+            });
+            
+            // Update stats counters
+            document.getElementById('active-injuries').textContent = activeCount;
+            document.getElementById('recovering-injuries').textContent = recoveringCount;
+            document.getElementById('resolved-injuries').textContent = resolvedCount;
+            
+            // Display message if no results
+            const noInjuriesMessage = document.getElementById('no-matching-injuries');
+            
+            if (activeCount === 0 && recoveringCount === 0 && resolvedCount === 0 && injuries.length > 0) {
+                // No injuries match the filters
+                if (!noInjuriesMessage) {
+                    const message = document.createElement('div');
+                    message.id = 'no-matching-injuries';
+                    message.className = 'col-md-12';
+                    message.innerHTML = `
+                        <div class="text-center py-5">
+                            <i class="fas fa-filter fa-3x mb-3 text-muted"></i>
+                            <h5>No injuries match your filters</h5>
+                            <p class="text-muted">Try adjusting your filter criteria.</p>
+                            <button class="btn btn-primary mt-2" id="reset-filters">
+                                <i class="fas fa-undo me-1"></i> Reset Filters
+                            </button>
+                        </div>
+                    `;
+                    document.getElementById('injuries-container').appendChild(message);
+                    
+                    // Add reset filters functionality
+                    document.getElementById('reset-filters').addEventListener('click', resetFilters);
+                }
+            } else if (noInjuriesMessage) {
+                // Remove no-matches message if it exists and there are matches
+                noInjuriesMessage.remove();
+            }
+        });
+        
+        function resetFilters() {
+            // Reset status filters
+            statusFilters.forEach(filter => {
+                if (filter.value === 'resolved') {
+                    filter.checked = false;
+                } else {
+                    filter.checked = true;
+                }
+            });
+            
+            // Reset dropdown filters
+            athleteFilter.value = 'all';
+            injuryTypeFilter.value = 'all';
+            dateFilter.value = 'all';
+            
+            // Apply the reset filters
+            applyFiltersBtn.click();
+        }
+    });
+</script>
+{% endblock %}

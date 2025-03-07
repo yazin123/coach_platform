@@ -40,6 +40,7 @@ INSTALLED_APPS = [
        'users',
     'training',
     'performance',
+    'injuries',
 ]
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'

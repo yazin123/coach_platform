@@ -1,90 +1,489 @@
-<!-- templates/users/register.html -->
 {% extends 'base.html' %}
 
-{% block title %}Register{% endblock %}
+{% block title %}Register - Athletic Coach{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-6">
+    <div class="col-md-8">
         <div class="card">
-            <div class="card-header">Register</div>
+            <div class="card-header">
+                <h4 class="mb-0"><i class="fas fa-user-plus me-2"></i>Create an Account</h4>
+            </div>
             <div class="card-body">
-                <form method="post">
+                <form method="POST" id="registrationForm" novalidate>
                     {% csrf_token %}
-                    {% for field in form %}
-                        <div class="mb-3">
-                            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                            {{ field }}
-                            {% if field.errors %}
-                                <div class="text-danger">
-                                    {% for error in field.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                    {% endfor %}
                     
-                    <div id="profile-fields" style="display: none;">
-                        {% if form.role.value == 'athlete' %}
-                            <div class="mb-3">
-                                <label for="id_full_name" class="form-label">Full Name</label>
-                                <input type="text" name="full_name" id="id_full_name" class="form-control" required>
+                    <!-- Step 1: User Account Information -->
+                    <div id="step1" class="registration-step active-step">
+                        <h5 class="mb-3">Step 1: Account Information</h5>
+                        
+                        <!-- Username -->
+                        <div class="mb-3">
+                            <label for="id_username" class="form-label">Username <span class="text-danger">*</span></label>
+                            <input type="text" name="username" class="form-control" id="id_username" required>
+                            <div class="invalid-feedback" id="username-feedback"></div>
+                        </div>
+                        
+                        <!-- Email -->
+                        <div class="mb-3">
+                            <label for="id_email" class="form-label">Email <span class="text-danger">*</span></label>
+                            <input type="email" name="email" class="form-control" id="id_email" required>
+                            <div class="invalid-feedback" id="email-feedback"></div>
+                        </div>
+                        
+                        <!-- Password -->
+                        <div class="mb-3">
+                            <label for="id_password1" class="form-label">Password <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="password" name="password1" class="form-control" id="id_password1" required>
+                                <button class="btn btn-outline-secondary" type="button" id="togglePassword1">
+                                    <i class="fas fa-eye"></i>
+                                </button>
                             </div>
-                            <div class="mb-3">
-                                <label for="id_birth_date" class="form-label">Birth Date</label>
-                                <input type="date" name="birth_date" id="id_birth_date" class="form-control" required>
+                            <div class="invalid-feedback" id="password1-feedback"></div>
+                            <div class="form-text">
+                                <small>
+                                    <ul class="password-requirements">
+                                        <li id="length-check">At least 8 characters</li>
+                                        <li id="letter-check">Contains letters</li>
+                                        <li id="number-check">Contains numbers</li>
+                                    </ul>
+                                </small>
                             </div>
-                            <div class="mb-3">
-                                <label for="id_sport" class="form-label">Sport</label>
-                                <input type="text" name="sport" id="id_sport" class="form-control" required>
+                        </div>
+                        
+                        <!-- Confirm Password -->
+                        <div class="mb-3">
+                            <label for="id_password2" class="form-label">Confirm Password <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="password" name="password2" class="form-control" id="id_password2" required>
+                                <button class="btn btn-outline-secondary" type="button" id="togglePassword2">
+                                    <i class="fas fa-eye"></i>
+                                </button>
                             </div>
+                            <div class="invalid-feedback" id="password2-feedback"></div>
+                        </div>
+                        
+                        <!-- Role Selection -->
+                        <div class="mb-3">
+                            <label for="id_role" class="form-label">Role <span class="text-danger">*</span></label>
+                            <select name="role" class="form-select" id="id_role" required>
+                                <option value="" selected disabled>Select your role</option>
+                                <option value="athlete">Athlete</option>
+                                <option value="coach">Coach</option>
+                                <option value="physio">Physiotherapist</option>
+                              
+                            </select>
+                            <div class="invalid-feedback" id="role-feedback"></div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-end">
+                            <button type="button" id="nextStep" class="btn btn-primary">
+                                Continue <i class="fas fa-arrow-right ms-1"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 2: Profile Information -->
+                    <div id="step2" class="registration-step hidden-step">
+                        <h5 class="mb-3">Step 2: Profile Information</h5>
+                        
+                        <!-- Common Field: Full Name -->
+                        <div class="mb-3 profile-field all-roles">
+                            <label for="id_full_name" class="form-label">Full Name <span class="text-danger">*</span></label>
+                            <input type="text" name="full_name" class="form-control" id="id_full_name" required>
+                            <div class="invalid-feedback" id="full_name-feedback"></div>
+                        </div>
+                        
+                        <!-- Athlete-specific fields -->
+                        <div class="athlete-fields role-specific-fields">
                             <div class="mb-3">
-                                <label for="id_gender" class="form-label">Gender</label>
-                                <select name="gender" id="id_gender" class="form-control" required>
+                                <label for="id_birth_date" class="form-label">Birth Date <span class="text-danger">*</span></label>
+                                <input type="date" name="birth_date" class="form-control" id="id_birth_date">
+                                <div class="invalid-feedback" id="birth_date-feedback"></div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="id_sport" class="form-label">Sport <span class="text-danger">*</span></label>
+                                <input type="text" name="sport" class="form-control" id="id_sport">
+                                <div class="invalid-feedback" id="sport-feedback"></div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="id_gender" class="form-label">Gender <span class="text-danger">*</span></label>
+                                <select name="gender" class="form-select" id="id_gender">
+                                    <option value="" selected disabled>Select gender</option>
                                     <option value="M">Male</option>
                                     <option value="F">Female</option>
                                     <option value="O">Other</option>
                                 </select>
+                                <div class="invalid-feedback" id="gender-feedback"></div>
                             </div>
-                        {% endif %}
+                        </div>
                         
-                        {% if form.role.value == 'coach' %}
+                        <!-- Coach-specific fields -->
+                        <div class="coach-fields role-specific-fields">
                             <div class="mb-3">
-                                <label for="id_full_name" class="form-label">Full Name</label>
-                                <input type="text" name="full_name" id="id_full_name" class="form-control" required>
+                                <label for="id_specialization" class="form-label">Specialization <span class="text-danger">*</span></label>
+                                <input type="text" name="specialization" class="form-control" id="id_specialization">
+                                <div class="invalid-feedback" id="specialization-feedback"></div>
                             </div>
-                            <div class="mb-3">
-                                <label for="id_specialization" class="form-label">Specialization</label>
-                                <input type="text" name="specialization" id="id_specialization" class="form-control" required>
-                            </div>
-                        {% endif %}
+                        </div>
                         
-                        <!-- Similar blocks for physiotherapist and admin -->
+                        <!-- Physiotherapist-specific fields -->
+                        <div class="physio-fields role-specific-fields">
+                            <div class="mb-3">
+                                <label for="id_specialty" class="form-label">Specialty <span class="text-danger">*</span></label>
+                                <input type="text" name="specialty" class="form-control" id="id_specialty">
+                                <div class="invalid-feedback" id="specialty-feedback"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Admin-specific fields -->
+                        <div class="admin-fields role-specific-fields">
+                            <!-- Admin just needs the common full_name field -->
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <button type="button" id="prevStep" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> Back
+                            </button>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-user-plus me-1"></i> Register
+                            </button>
+                        </div>
                     </div>
-                    
-                    <button type="submit" class="btn btn-primary">Register</button>
                 </form>
+            </div>
+            <div class="card-footer text-center">
+                <p class="mb-0">Already have an account? <a href="{% url 'login' %}">Login here</a></p>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const roleField = document.querySelector('[name="role"]');
-    const profileFields = document.getElementById('profile-fields');
-    
-    function toggleProfileFields() {
-        if (roleField.value !== 'admin') {
-            profileFields.style.display = 'block';
-        } else {
-            profileFields.style.display = 'none';
-        }
+{% block extra_css %}
+<style>
+    .registration-step {
+        transition: all 0.3s ease;
     }
     
-    roleField.addEventListener('change', toggleProfileFields);
-    toggleProfileFields(); // Initial call
-});
+    .hidden-step {
+        display: none;
+    }
+    
+    .active-step {
+        display: block;
+    }
+    
+    .role-specific-fields {
+        display: none;
+    }
+    
+    .password-requirements {
+        padding-left: 20px;
+        margin-top: 10px;
+    }
+    
+    .password-requirements li {
+        margin-bottom: 5px;
+        color: #6c757d;
+    }
+    
+    .password-requirements li.valid {
+        color: #28a745;
+    }
+    
+    .password-requirements li.valid::before {
+        content: "✓ ";
+    }
+    
+    .password-requirements li:not(.valid)::before {
+        content: "○ ";
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Step navigation
+        const step1 = document.getElementById('step1');
+        const step2 = document.getElementById('step2');
+        const nextStepBtn = document.getElementById('nextStep');
+        const prevStepBtn = document.getElementById('prevStep');
+        
+        // Password toggle functionality
+        const togglePassword1 = document.getElementById('togglePassword1');
+        const togglePassword2 = document.getElementById('togglePassword2');
+        const password1 = document.getElementById('id_password1');
+        const password2 = document.getElementById('id_password2');
+        
+        // Role-specific fields
+        const roleSelect = document.getElementById('id_role');
+        const athleteFields = document.querySelector('.athlete-fields');
+        const coachFields = document.querySelector('.coach-fields');
+        const physioFields = document.querySelector('.physio-fields');
+        const adminFields = document.querySelector('.admin-fields');
+        
+        // Password validation
+        const lengthCheck = document.getElementById('length-check');
+        const letterCheck = document.getElementById('letter-check');
+        const numberCheck = document.getElementById('number-check');
+        
+        // Toggle password visibility
+        togglePassword1.addEventListener('click', function() {
+            togglePasswordVisibility(password1, this.querySelector('i'));
+        });
+        
+        togglePassword2.addEventListener('click', function() {
+            togglePasswordVisibility(password2, this.querySelector('i'));
+        });
+        
+        function togglePasswordVisibility(passwordField, icon) {
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                passwordField.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+        
+        // Password validation checks
+        password1.addEventListener('input', function() {
+            const password = this.value;
+            
+            // Length check (at least 8 characters)
+            if (password.length >= 8) {
+                lengthCheck.classList.add('valid');
+            } else {
+                lengthCheck.classList.remove('valid');
+            }
+            
+            // Letter check
+            if (/[a-zA-Z]/.test(password)) {
+                letterCheck.classList.add('valid');
+            } else {
+                letterCheck.classList.remove('valid');
+            }
+            
+            // Number check
+            if (/\d/.test(password)) {
+                numberCheck.classList.add('valid');
+            } else {
+                numberCheck.classList.remove('valid');
+            }
+        });
+        
+        // Password confirmation check
+        password2.addEventListener('input', function() {
+            if (this.value === password1.value) {
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+            } else {
+                this.classList.remove('is-valid');
+                this.classList.add('is-invalid');
+                document.getElementById('password2-feedback').textContent = 'Passwords do not match';
+            }
+        });
+        
+        // Role selection change
+        roleSelect.addEventListener('change', function() {
+            const selectedRole = this.value;
+            
+            // Hide all role-specific fields first
+            document.querySelectorAll('.role-specific-fields').forEach(el => {
+                el.style.display = 'none';
+            });
+            
+            // Show fields based on selected role
+            if (selectedRole === 'athlete') {
+                athleteFields.style.display = 'block';
+            } else if (selectedRole === 'coach') {
+                coachFields.style.display = 'block';
+            } else if (selectedRole === 'physio') {
+                physioFields.style.display = 'block';
+            } else if (selectedRole === 'admin') {
+                adminFields.style.display = 'block';
+            }
+        });
+        
+        // Next step button
+        nextStepBtn.addEventListener('click', function() {
+            // Validate first step fields
+            const username = document.getElementById('id_username').value;
+            const email = document.getElementById('id_email').value;
+            const password1Value = password1.value;
+            const password2Value = password2.value;
+            const role = roleSelect.value;
+            
+            let isValid = true;
+            
+            // Basic validation
+            if (!username) {
+                document.getElementById('id_username').classList.add('is-invalid');
+                document.getElementById('username-feedback').textContent = 'Username is required';
+                isValid = false;
+            } else {
+                document.getElementById('id_username').classList.remove('is-invalid');
+            }
+            
+            if (!email) {
+                document.getElementById('id_email').classList.add('is-invalid');
+                document.getElementById('email-feedback').textContent = 'Email is required';
+                isValid = false;
+            } else if (!/\S+@\S+\.\S+/.test(email)) {
+                document.getElementById('id_email').classList.add('is-invalid');
+                document.getElementById('email-feedback').textContent = 'Please enter a valid email address';
+                isValid = false;
+            } else {
+                document.getElementById('id_email').classList.remove('is-invalid');
+            }
+            
+            // Password validation
+            if (!password1Value) {
+                password1.classList.add('is-invalid');
+                document.getElementById('password1-feedback').textContent = 'Password is required';
+                isValid = false;
+            } else if (password1Value.length < 8) {
+                password1.classList.add('is-invalid');
+                document.getElementById('password1-feedback').textContent = 'Password must be at least 8 characters';
+                isValid = false;
+            } else if (!/[a-zA-Z]/.test(password1Value) || !/\d/.test(password1Value)) {
+                password1.classList.add('is-invalid');
+                document.getElementById('password1-feedback').textContent = 'Password must include both letters and numbers';
+                isValid = false;
+            } else {
+                password1.classList.remove('is-invalid');
+            }
+            
+            if (!password2Value) {
+                password2.classList.add('is-invalid');
+                document.getElementById('password2-feedback').textContent = 'Please confirm your password';
+                isValid = false;
+            } else if (password1Value !== password2Value) {
+                password2.classList.add('is-invalid');
+                document.getElementById('password2-feedback').textContent = 'Passwords do not match';
+                isValid = false;
+            } else {
+                password2.classList.remove('is-invalid');
+            }
+            
+            if (!role) {
+                roleSelect.classList.add('is-invalid');
+                document.getElementById('role-feedback').textContent = 'Please select a role';
+                isValid = false;
+            } else {
+                roleSelect.classList.remove('is-invalid');
+            }
+            
+            // If all validations pass, proceed to step 2
+            if (isValid) {
+                step1.classList.remove('active-step');
+                step1.classList.add('hidden-step');
+                step2.classList.remove('hidden-step');
+                step2.classList.add('active-step');
+                
+                // Show appropriate role-specific fields
+                document.querySelectorAll('.role-specific-fields').forEach(el => {
+                    el.style.display = 'none';
+                });
+                
+                if (role === 'athlete') {
+                    athleteFields.style.display = 'block';
+                } else if (role === 'coach') {
+                    coachFields.style.display = 'block';
+                } else if (role === 'physio') {
+                    physioFields.style.display = 'block';
+                } else if (role === 'admin') {
+                    adminFields.style.display = 'block';
+                }
+            }
+        });
+        
+        // Previous step button
+        prevStepBtn.addEventListener('click', function() {
+            step2.classList.remove('active-step');
+            step2.classList.add('hidden-step');
+            step1.classList.remove('hidden-step');
+            step1.classList.add('active-step');
+        });
+        
+        // Form submission validation
+        document.getElementById('registrationForm').addEventListener('submit', function(e) {
+            const fullName = document.getElementById('id_full_name').value;
+            const role = roleSelect.value;
+            
+            let isValid = true;
+            
+            // Validate common fields
+            if (!fullName) {
+                document.getElementById('id_full_name').classList.add('is-invalid');
+                document.getElementById('full_name-feedback').textContent = 'Full name is required';
+                isValid = false;
+            } else {
+                document.getElementById('id_full_name').classList.remove('is-invalid');
+            }
+            
+            // Validate role-specific fields
+            if (role === 'athlete') {
+                const birthDate = document.getElementById('id_birth_date').value;
+                const sport = document.getElementById('id_sport').value;
+                const gender = document.getElementById('id_gender').value;
+                
+                if (!birthDate) {
+                    document.getElementById('id_birth_date').classList.add('is-invalid');
+                    document.getElementById('birth_date-feedback').textContent = 'Birth date is required';
+                    isValid = false;
+                } else {
+                    document.getElementById('id_birth_date').classList.remove('is-invalid');
+                }
+                
+                if (!sport) {
+                    document.getElementById('id_sport').classList.add('is-invalid');
+                    document.getElementById('sport-feedback').textContent = 'Sport is required';
+                    isValid = false;
+                } else {
+                    document.getElementById('id_sport').classList.remove('is-invalid');
+                }
+                
+                if (!gender) {
+                    document.getElementById('id_gender').classList.add('is-invalid');
+                    document.getElementById('gender-feedback').textContent = 'Gender is required';
+                    isValid = false;
+                } else {
+                    document.getElementById('id_gender').classList.remove('is-invalid');
+                }
+            } else if (role === 'coach') {
+                const specialization = document.getElementById('id_specialization').value;
+                
+                if (!specialization) {
+                    document.getElementById('id_specialization').classList.add('is-invalid');
+                    document.getElementById('specialization-feedback').textContent = 'Specialization is required';
+                    isValid = false;
+                } else {
+                    document.getElementById('id_specialization').classList.remove('is-invalid');
+                }
+            } else if (role === 'physio') {
+                const specialty = document.getElementById('id_specialty').value;
+                
+                if (!specialty) {
+                    document.getElementById('id_specialty').classList.add('is-invalid');
+                    document.getElementById('specialty-feedback').textContent = 'Specialty is required';
+                    isValid = false;
+                } else {
+                    document.getElementById('id_specialty').classList.remove('is-invalid');
+                }
+            }
+            
+            if (!isValid) {
+                e.preventDefault();
+            }
+        });
+    });
 </script>
 {% endblock %}

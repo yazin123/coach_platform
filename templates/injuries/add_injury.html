@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+
+{% block title %}Record New Injury - Athletic Coach{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Record New Injury</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" novalidate>
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="id_athlete" class="form-label">Athlete</label>
+                        <select name="athlete" class="form-select" id="id_athlete" required>
+                            <option value="">Select an athlete</option>
+                            {% for athlete in athletes %}
+                                <option value="{{ athlete.user.id }}">{{ athlete.full_name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Select the athlete with the injury.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_injury_type" class="form-label">Injury Type</label>
+                        <select name="injury_type" class="form-select" id="id_injury_type" required>
+                            <option value="">Select injury type</option>
+                            <option value="Sprain">Sprain</option>
+                            <option value="Strain">Strain</option>
+                            <option value="Fracture">Fracture</option>
+                            <option value="Dislocation">Dislocation</option>
+                            <option value="Contusion">Contusion</option>
+                            <option value="Laceration">Laceration</option>
+                            <option value="Tendonitis">Tendonitis</option>
+                            <option value="Bursitis">Bursitis</option>
+                            <option value="Concussion">Concussion</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <div class="form-text">Select the type of injury.</div>
+                    </div>
+                    
+                    <div id="other_injury_container" class="mb-3" style="display: none;">
+                        <label for="id_other_injury_type" class="form-label">Specify Injury Type</label>
+                        <input type="text" name="other_injury_type" class="form-control" id="id_other_injury_type">
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="id_injury_date" class="form-label">Injury Date</label>
+                            <input type="date" name="injury_date" class="form-control" id="id_injury_date" required>
+                            <div class="form-text">When did the injury occur?</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="id_expected_recovery_date" class="form-label">Expected Recovery Date</label>
+                            <input type="date" name="expected_recovery_date" class="form-control" id="id_expected_recovery_date" required>
+                            <div class="form-text">Estimated date of full recovery.</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_description" class="form-label">Description</label>
+                        <textarea name="description" class="form-control" id="id_description" rows="4" required></textarea>
+                        <div class="form-text">Provide details about the injury including how it occurred, severity, and any immediate treatment.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_status" class="form-label">Status</label>
+                        <select name="status" class="form-select" id="id_status" required>
+                            <option value="active" selected>Active</option>
+                            <option value="recovering">Recovering</option>
+                            <option value="resolved">Resolved</option>
+                        </select>
+                        <div class="form-text">Current status of the injury.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_notes" class="form-label">Additional Notes</label>
+                        <textarea name="notes" class="form-control" id="id_notes" rows="3"></textarea>
+                        <div class="form-text">Include any additional information or treatment notes.</div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i> Save Injury Record
+                        </button>
+                        <a href="{% url 'injury_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-1"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle "Other" injury type selection
+        const injuryTypeSelect = document.getElementById('id_injury_type');
+        const otherInjuryContainer = document.getElementById('other_injury_container');
+        const otherInjuryInput = document.getElementById('id_other_injury_type');
+        
+        injuryTypeSelect.addEventListener('change', function() {
+            if (this.value === 'Other') {
+                otherInjuryContainer.style.display = 'block';
+                otherInjuryInput.setAttribute('required', 'required');
+            } else {
+                otherInjuryContainer.style.display = 'none';
+                otherInjuryInput.removeAttribute('required');
+                otherInjuryInput.value = '';
+            }
+        });
+        
+        // Set minimum date for injury date to be in the past
+        const injuryDateInput = document.getElementById('id_injury_date');
+        const recoveryDateInput = document.getElementById('id_expected_recovery_date');
+        
+        // Set default injury date to today
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        
+        const todayStr = `${year}-${month}-${day}`;
+        injuryDateInput.value = todayStr;
+        
+        // Calculate a default recovery date (2 weeks from today)
+        const twoWeeksLater = new Date(today);
+        twoWeeksLater.setDate(today.getDate() + 14);
+        
+        const recYear = twoWeeksLater.getFullYear();
+        const recMonth = String(twoWeeksLater.getMonth() + 1).padStart(2, '0');
+        const recDay = String(twoWeeksLater.getDate()).padStart(2, '0');
+        
+        const recDateStr = `${recYear}-${recMonth}-${recDay}`;
+        recoveryDateInput.value = recDateStr;
+        
+        // Ensure recovery date is after injury date
+        injuryDateInput.addEventListener('change', function() {
+            const injuryDate = new Date(this.value);
+            const recoveryDate = new Date(recoveryDateInput.value);
+            
+            if (recoveryDate <= injuryDate) {
+                // Set recovery date to 2 weeks after injury date
+                injuryDate.setDate(injuryDate.getDate() + 14);
+                
+                const newRecYear = injuryDate.getFullYear();
+                const newRecMonth = String(injuryDate.getMonth() + 1).padStart(2, '0');
+                const newRecDay = String(injuryDate.getDate()).padStart(2, '0');
+                
+                recoveryDateInput.value = `${newRecYear}-${newRecMonth}-${newRecDay}`;
+            }
+        });
+        
+        recoveryDateInput.addEventListener('change', function() {
+            const injuryDate = new Date(injuryDateInput.value);
+            const recoveryDate = new Date(this.value);
+            
+            if (recoveryDate <= injuryDate) {
+                this.classList.add('is-invalid');
+                alert('Recovery date must be after the injury date');
+            } else {
+                this.classList.remove('is-invalid');
+            }
+        });
+        
+        // Form validation
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function(event) {
+            let isValid = true;
+            
+            // Check required fields
+            const requiredFields = form.querySelectorAll('[required]');
+            requiredFields.forEach(field => {
+                if (!field.value) {
+                    field.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    field.classList.remove('is-invalid');
+                }
+            });
+            
+            // Check recovery date is after injury date
+            const injuryDate = new Date(injuryDateInput.value);
+            const recoveryDate = new Date(recoveryDateInput.value);
+            
+            if (recoveryDate <= injuryDate) {
+                recoveryDateInput.classList.add('is-invalid');
+                isValid = false;
+            }
+            
+            if (!isValid) {
+                event.preventDefault();
+                window.scrollTo(0, 0);
+                
+                // Show an alert at the top of the form
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+                alertDiv.role = 'alert';
+                alertDiv.innerHTML = `
+                    <strong>Please correct the errors:</strong>
+                    <ul>
+                        <li>Fill in all required fields.</li>
+                        <li>Ensure the recovery date is after the injury date.</li>
+                    </ul>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+                
+                form.prepend(alertDiv);
+            }
+        });
+    });
+</script>
+{% endblock %}

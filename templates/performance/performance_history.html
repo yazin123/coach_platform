@@ -1,81 +1,651 @@
-<!-- templates/performance/performance_history.html -->
 {% extends 'base.html' %}
 
-{% block title %}Performance History{% endblock %}
+{% block title %}Performance History - Athletic Coach{% endblock %}
+
+{% block extra_css %}
+<style>
+    .performance-chart {
+        min-height: 300px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .intensity-1-2 { background-color: rgba(52, 152, 219, 0.3); }
+    .intensity-3-4 { background-color: rgba(52, 152, 219, 0.5); }
+    .intensity-5-6 { background-color: rgba(52, 152, 219, 0.7); }
+    .intensity-7-8 { background-color: rgba(231, 76, 60, 0.5); }
+    .intensity-9-10 { background-color: rgba(231, 76, 60, 0.7); }
+    
+    .filter-box {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .stat-card {
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+        margin-bottom: 15px;
+        color: white;
+    }
+    
+    .stat-card i {
+        font-size: 2rem;
+        margin-bottom: 10px;
+    }
+    
+    .stat-card .stat-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+    
+    .stat-card .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row">
-        <div class="col-md-12">
-            <div class="card mb-4">
-                <div class="card-header">Performance Analytics</div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="card text-center">
-                                <div class="card-body">
-                                    <h5 class="card-title">Total Training Sessions</h5>
-                                    <p class="card-text display-4">{{ total_sessions }}</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card text-center">
-                                <div class="card-body">
-                                    <h5 class="card-title">Average Intensity</h5>
-                                    <p class="card-text display-4">{{ avg_intensity }}/10</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card text-center">
-                                <div class="card-body">
-                                    <h5 class="card-title">Total Training Duration</h5>
-                                    <p class="card-text display-4">{{ total_duration }} mins</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2 class="mb-3"><i class="fas fa-chart-line me-2"></i>Performance History</h2>
+        <p class="text-muted">Track your performance metrics and progress over time.</p>
+    </div>
+</div>
+
+<!-- Performance Stats -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stat-card bg-primary">
+            <i class="fas fa-clipboard-list"></i>
+            <div class="stat-value">{{ total_sessions }}</div>
+            <div class="stat-label">Total Sessions</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card bg-success">
+            <i class="fas fa-clock"></i>
+            <div class="stat-value">{{ total_duration }}</div>
+            <div class="stat-label">Total Hours</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card bg-warning">
+            <i class="fas fa-fire"></i>
+            <div class="stat-value">{{ avg_intensity }}/10</div>
+            <div class="stat-label">Average Intensity</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card bg-info">
+            <i class="fas fa-trophy"></i>
+            <div class="stat-value" id="streak-count">0</div>
+            <div class="stat-label">Day Streak</div>
+        </div>
+    </div>
+</div>
+
+<!-- Performance Chart -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Performance Visualization</h5>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-sm btn-outline-primary active" data-chart-type="activities">
+                        Activities
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-chart-type="duration">
+                        Duration
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-chart-type="intensity">
+                        Intensity
+                    </button>
                 </div>
             </div>
-
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    Performance History
-                    <a href="{% url 'log_performance' %}" class="btn btn-primary btn-sm">Log New Performance</a>
+            <div class="card-body">
+                <div class="performance-chart" id="performanceChart">
+                    <!-- Chart will be rendered here -->
+                    <canvas id="activityChart"></canvas>
                 </div>
-                <div class="card-body">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Activity</th>
-                                <th>Duration</th>
-                                <th>Intensity</th>
-                                <th>Notes</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for log in logs %}
-                                <tr>
-                                    <td>{{ log.log_date }}</td>
-                                    <td>{{ log.activity_type }}</td>
-                                    <td>{{ log.duration }} mins</td>
-                                    <td>{{ log.intensity_level }}/10</td>
-                                    <td>{{ log.notes|default:"No notes" }}</td>
-                                </tr>
-                            {% empty %}
-                                <tr>
-                                    <td colspan="5" class="text-center">
-                                        No performance logs yet. <a href="{% url 'log_performance' %}">Log your first performance!</a>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                <div class="text-center">
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-outline-secondary active" data-timeframe="week">
+                            Week
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-timeframe="month">
+                            Month
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-timeframe="year">
+                            Year
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Filter and Activity Log -->
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filters</h5>
+            </div>
+            <div class="card-body">
+                <form id="filterForm">
+                    <div class="mb-3">
+                        <label for="activityType" class="form-label">Activity Type</label>
+                        <select class="form-select" id="activityType">
+                            <option value="">All Activities</option>
+                            <!-- Dynamically populate from available activity types -->
+                            {% for activity_type in activity_types %}
+                                <option value="{{ activity_type }}">{{ activity_type }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="dateRange" class="form-label">Date Range</label>
+                        <select class="form-select" id="dateRange">
+                            <option value="7">Last 7 days</option>
+                            <option value="30">Last 30 days</option>
+                            <option value="90">Last 3 months</option>
+                            <option value="180">Last 6 months</option>
+                            <option value="365">Last year</option>
+                            <option value="all" selected>All time</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="intensityRange" class="form-label">Intensity Range</label>
+                        <div class="d-flex align-items-center">
+                            <span id="minIntensity">1</span>
+                            <input type="range" class="form-range mx-2" min="1" max="10" id="intensityRangeMin" value="1">
+                            <span id="maxIntensity">10</span>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="button" id="applyFilters" class="btn btn-primary">
+                            <i class="fas fa-search me-1"></i> Apply Filters
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="d-grid">
+            <a href="{% url 'log_performance' %}" class="btn btn-success mb-4">
+                <i class="fas fa-plus me-1"></i> Log New Performance
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Activity Log</h5>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-sort me-1"></i> Sort
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="sortDropdown">
+                        <li><a class="dropdown-item sort-option active" data-sort="date-desc" href="#">Date (Newest First)</a></li>
+                        <li><a class="dropdown-item sort-option" data-sort="date-asc" href="#">Date (Oldest First)</a></li>
+                        <li><a class="dropdown-item sort-option" data-sort="intensity-desc" href="#">Intensity (High to Low)</a></li>
+                        <li><a class="dropdown-item sort-option" data-sort="intensity-asc" href="#">Intensity (Low to High)</a></li>
+                        <li><a class="dropdown-item sort-option" data-sort="duration-desc" href="#">Duration (Long to Short)</a></li>
+                        <li><a class="dropdown-item sort-option" data-sort="duration-asc" href="#">Duration (Short to Long)</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if logs %}
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="performanceTable">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Activity</th>
+                                    <th>Duration</th>
+                                    <th>Intensity</th>
+                                    <th>Notes</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in logs %}
+                                    <tr data-activity="{{ log.activity_type }}" data-intensity="{{ log.intensity_level }}" data-date="{{ log.log_date|date:'Y-m-d' }}">
+                                        <td>{{ log.log_date|date:"M d, Y" }}</td>
+                                        <td>{{ log.activity_type }}</td>
+                                        <td>{{ log.duration }} min</td>
+                                        <td>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar 
+                                                    {% if log.intensity_level <= 2 %}
+                                                        bg-info
+                                                    {% elif log.intensity_level <= 4 %}
+                                                        bg-success
+                                                    {% elif log.intensity_level <= 6 %}
+                                                        bg-warning
+                                                    {% elif log.intensity_level <= 8 %}
+                                                        bg-danger
+                                                    {% else %}
+                                                        bg-dark
+                                                    {% endif %}" 
+                                                    role="progressbar" style="width: {% widthratio log.intensity_level 10 100 %}%;" 
+                                                    aria-valuenow="{{ log.intensity_level }}" aria-valuemin="0" aria-valuemax="10">
+                                                    {{ log.intensity_level }}/10
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if log.notes %}
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="popover" title="Notes" data-bs-content="{{ log.notes }}">
+                                                    <i class="fas fa-clipboard"></i> View
+                                                </button>
+                                            {% else %}
+                                                <span class="text-muted">No notes</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <i class="fas fa-ellipsis-v"></i>
+                                                </button>
+                                                <ul class="dropdown-menu">
+                                                    <li><a class="dropdown-item" href="#"><i class="fas fa-edit me-1"></i> Edit</a></li>
+                                                    <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-trash-alt me-1"></i> Delete</a></li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-clipboard fa-3x mb-3 text-muted"></i>
+                        <h5>No performance logs yet</h5>
+                        <p class="text-muted">Start tracking your performance by adding your first log.</p>
+                        <a href="{% url 'log_performance' %}" class="btn btn-primary mt-2">
+                            <i class="fas fa-plus me-1"></i> Log Performance
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize popovers
+        const popoverTriggerList = document.querySelectorAll('[data-bs-toggle="popover"]');
+        const popoverList = [...popoverTriggerList].map(popoverTriggerEl => new bootstrap.Popover(popoverTriggerEl));
+        
+        // Sample performance data
+        // In a real app, this would come from your Django view as JSON
+        const performanceData = [
+            {% for log in logs %}
+                {
+                    date: new Date('{{ log.log_date|date:"Y-m-d" }}'),
+                    activity: '{{ log.activity_type }}',
+                    duration: {{ log.duration }},
+                    intensity: {{ log.intensity_level }},
+                    notes: '{{ log.notes|default:"" }}'
+                },
+            {% endfor %}
+        ];
+        
+        // Calculate streak
+        function calculateStreak(data) {
+            if (data.length === 0) return 0;
+            
+            // Sort data by date (newest first)
+            const sortedData = [...data].sort((a, b) => b.date - a.date);
+            
+            // Get today's date at midnight
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            // Check if the most recent activity was today
+            const mostRecentDate = new Date(sortedData[0].date);
+            mostRecentDate.setHours(0, 0, 0, 0);
+            
+            // If most recent activity wasn't today or yesterday, streak is 0
+            const dayDiff = Math.floor((today - mostRecentDate) / (1000 * 60 * 60 * 24));
+            if (dayDiff > 1) return 0;
+            
+            // Count consecutive days with activities
+            let streak = 1;
+            let currentDate = mostRecentDate;
+            
+            // Go back one day at a time
+            for (let i = 1; i < data.length; i++) {
+                // Move to previous day
+                const prevDate = new Date(currentDate);
+                prevDate.setDate(prevDate.getDate() - 1);
+                
+                // Find if there was an activity on that day
+                const activityOnPrevDay = sortedData.some(item => {
+                    const itemDate = new Date(item.date);
+                    itemDate.setHours(0, 0, 0, 0);
+                    return itemDate.getTime() === prevDate.getTime();
+                });
+                
+                if (activityOnPrevDay) {
+                    streak++;
+                    currentDate = prevDate;
+                } else {
+                    break;
+                }
+            }
+            
+            return streak;
+        }
+        
+        // Set the streak count
+        document.getElementById('streak-count').textContent = calculateStreak(performanceData);
+        
+        // Prepare chart data
+        function prepareChartData(data, timeframe = 'week', chartType = 'activities') {
+            const now = new Date();
+            let startDate;
+            
+            // Determine start date based on timeframe
+            if (timeframe === 'week') {
+                startDate = new Date(now);
+                startDate.setDate(now.getDate() - 7);
+            } else if (timeframe === 'month') {
+                startDate = new Date(now);
+                startDate.setMonth(now.getMonth() - 1);
+            } else if (timeframe === 'year') {
+                startDate = new Date(now);
+                startDate.setFullYear(now.getFullYear() - 1);
+            }
+            
+            // Filter data based on timeframe
+            const filteredData = data.filter(item => item.date >= startDate);
+            
+            // Prepare labels and datasets based on chart type
+            if (chartType === 'activities') {
+                // Group by activity type
+                const activityCounts = {};
+                filteredData.forEach(item => {
+                    if (!activityCounts[item.activity]) {
+                        activityCounts[item.activity] = 0;
+                    }
+                    activityCounts[item.activity]++;
+                });
+                
+                return {
+                    labels: Object.keys(activityCounts),
+                    datasets: [{
+                        label: 'Number of Sessions',
+                        data: Object.values(activityCounts),
+                        backgroundColor: [
+                            'rgba(52, 152, 219, 0.7)',
+                            'rgba(46, 204, 113, 0.7)',
+                            'rgba(155, 89, 182, 0.7)',
+                            'rgba(231, 76, 60, 0.7)',
+                            'rgba(241, 196, 15, 0.7)',
+                            'rgba(26, 188, 156, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(52, 152, 219, 1)',
+                            'rgba(46, 204, 113, 1)',
+                            'rgba(155, 89, 182, 1)',
+                            'rgba(231, 76, 60, 1)',
+                            'rgba(241, 196, 15, 1)',
+                            'rgba(26, 188, 156, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                };
+            } else if (chartType === 'duration') {
+                // Group by date for a line chart
+                const dateMap = new Map();
+                let labels = [];
+                
+                // Generate all dates in the range
+                for (let d = new Date(startDate); d <= now; d.setDate(d.getDate() + 1)) {
+                    const dateStr = d.toISOString().split('T')[0];
+                    dateMap.set(dateStr, 0);
+                    labels.push(dateStr);
+                }
+                
+                // Aggregate duration by date
+                filteredData.forEach(item => {
+                    const dateStr = item.date.toISOString().split('T')[0];
+                    if (dateMap.has(dateStr)) {
+                        dateMap.set(dateStr, dateMap.get(dateStr) + item.duration);
+                    }
+                });
+                
+                return {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Duration (minutes)',
+                        data: Array.from(dateMap.values()),
+                        fill: false,
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        tension: 0.1
+                    }]
+                };
+            } else if (chartType === 'intensity') {
+                // Group by date for average intensity
+                const dateMap = new Map();
+                const countMap = new Map();
+                let labels = [];
+                
+                // Generate all dates in the range
+                for (let d = new Date(startDate); d <= now; d.setDate(d.getDate() + 1)) {
+                    const dateStr = d.toISOString().split('T')[0];
+                    dateMap.set(dateStr, 0);
+                    countMap.set(dateStr, 0);
+                    labels.push(dateStr);
+                }
+                
+                // Aggregate intensity by date
+                filteredData.forEach(item => {
+                    const dateStr = item.date.toISOString().split('T')[0];
+                    if (dateMap.has(dateStr)) {
+                        dateMap.set(dateStr, dateMap.get(dateStr) + item.intensity);
+                        countMap.set(dateStr, countMap.get(dateStr) + 1);
+                    }
+                });
+                
+                // Calculate average intensity
+                const averageIntensity = labels.map(date => {
+                    const count = countMap.get(date);
+                    return count > 0 ? dateMap.get(date) / count : 0;
+                });
+                
+                return {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Average Intensity',
+                        data: averageIntensity,
+                        fill: false,
+                        borderColor: 'rgba(231, 76, 60, 1)',
+                        tension: 0.1
+                    }]
+                };
+            }
+        }
+        
+        // Initialize chart
+        let chart;
+        function initChart(chartType = 'activities', timeframe = 'week') {
+            const ctx = document.getElementById('activityChart').getContext('2d');
+            const chartData = prepareChartData(performanceData, timeframe, chartType);
+            
+            // Destroy existing chart if it exists
+            if (chart) {
+                chart.destroy();
+            }
+            
+            // Determine chart type
+            let chartConfig = {
+                type: chartType === 'activities' ? 'bar' : 'line',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: chartType === 'activities' ? 'Activity Distribution' : 
+                                  chartType === 'duration' ? 'Duration Over Time' : 'Intensity Over Time'
+                        }
+                    }
+                }
+            };
+            
+            chart = new Chart(ctx, chartConfig);
+        }
+        
+        // Initialize default chart
+        initChart('activities', 'week');
+        
+        // Chart type buttons
+        document.querySelectorAll('[data-chart-type]').forEach(button => {
+            button.addEventListener('click', function() {
+                // Update active state
+                document.querySelectorAll('[data-chart-type]').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                this.classList.add('active');
+                
+                // Get current timeframe
+                const timeframe = document.querySelector('[data-timeframe].active').getAttribute('data-timeframe');
+                
+                // Update chart
+                initChart(this.getAttribute('data-chart-type'), timeframe);
+            });
+        });
+        
+        // Timeframe buttons
+        document.querySelectorAll('[data-timeframe]').forEach(button => {
+            button.addEventListener('click', function() {
+                // Update active state
+                document.querySelectorAll('[data-timeframe]').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                this.classList.add('active');
+                
+                // Get current chart type
+                const chartType = document.querySelector('[data-chart-type].active').getAttribute('data-chart-type');
+                
+                // Update chart
+                initChart(chartType, this.getAttribute('data-timeframe'));
+            });
+        });
+        
+        // Intensity range slider
+        const minIntensitySlider = document.getElementById('intensityRangeMin');
+        const minIntensityLabel = document.getElementById('minIntensity');
+        
+        minIntensitySlider.addEventListener('input', function() {
+            minIntensityLabel.textContent = this.value;
+        });
+        
+        // Apply filters
+        document.getElementById('applyFilters').addEventListener('click', function() {
+            const activityFilter = document.getElementById('activityType').value;
+            const dateRangeFilter = document.getElementById('dateRange').value;
+            const minIntensity = parseInt(document.getElementById('intensityRangeMin').value);
+            
+            // Filter table rows
+            const tableRows = document.querySelectorAll('#performanceTable tbody tr');
+            
+            tableRows.forEach(row => {
+                const activity = row.getAttribute('data-activity');
+                const date = new Date(row.getAttribute('data-date'));
+                const intensity = parseInt(row.getAttribute('data-intensity'));
+                
+                let showRow = true;
+                
+                // Apply activity filter
+                if (activityFilter && activity !== activityFilter) {
+                    showRow = false;
+                }
+                
+                // Apply date range filter
+                if (dateRangeFilter !== 'all') {
+                    const days = parseInt(dateRangeFilter);
+                    const cutoffDate = new Date();
+                    cutoffDate.setDate(cutoffDate.getDate() - days);
+                    
+                    if (date < cutoffDate) {
+                        showRow = false;
+                    }
+                }
+                
+                // Apply intensity filter
+                if (intensity < minIntensity) {
+                    showRow = false;
+                }
+                
+                // Show or hide row
+                row.style.display = showRow ? '' : 'none';
+            });
+        });
+        
+        // Sort options
+        document.querySelectorAll('.sort-option').forEach(option => {
+            option.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Update active state
+                document.querySelectorAll('.sort-option').forEach(opt => {
+                    opt.classList.remove('active');
+                });
+                this.classList.add('active');
+                
+                const sortOption = this.getAttribute('data-sort');
+                const tbody = document.querySelector('#performanceTable tbody');
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+                
+                // Sort rows based on selected option
+                rows.sort((a, b) => {
+                    if (sortOption === 'date-desc') {
+                        return new Date(b.getAttribute('data-date')) - new Date(a.getAttribute('data-date'));
+                    } else if (sortOption === 'date-asc') {
+                        return new Date(a.getAttribute('data-date')) - new Date(b.getAttribute('data-date'));
+                    } else if (sortOption === 'intensity-desc') {
+                        return parseInt(b.getAttribute('data-intensity')) - parseInt(a.getAttribute('data-intensity'));
+                    } else if (sortOption === 'intensity-asc') {
+                        return parseInt(a.getAttribute('data-intensity')) - parseInt(b.getAttribute('data-intensity'));
+                    } else if (sortOption === 'duration-desc') {
+                        return parseFloat(b.cells[2].textContent) - parseFloat(a.cells[2].textContent);
+                    } else if (sortOption === 'duration-asc') {
+                        return parseFloat(a.cells[2].textContent) - parseFloat(b.cells[2].textContent);
+                    }
+                    return 0;
+                });
+                
+                // Reorder rows in the table
+                rows.forEach(row => {
+                    tbody.appendChild(row);
+                });
+            });
+        });
+    });
+</script>
 {% endblock %}

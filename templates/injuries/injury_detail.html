@@ -1,0 +1,495 @@
+{% extends 'base.html' %}
+
+{% block title %}Injury Details - Athletic Coach{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-badge {
+        font-size: 0.9rem;
+        padding: 5px 10px;
+    }
+    
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+        margin-bottom: 20px;
+    }
+    
+    .timeline:before {
+        content: '';
+        position: absolute;
+        left: 4px;
+        top: 5px;
+        height: calc(100% - 10px);
+        width: 2px;
+        background-color: #e9ecef;
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 15px;
+    }
+    
+    .timeline-marker {
+        position: absolute;
+        left: -30px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: #3498db;
+        top: 5px;
+    }
+    
+    .timeline-item.current .timeline-marker {
+        background-color: #e74c3c;
+        width: 12px;
+        height: 12px;
+        left: -31px;
+        top: 4px;
+    }
+    
+    .timeline-item.resolved .timeline-marker {
+        background-color: #2ecc71;
+    }
+    
+    .timeline-content {
+        padding-bottom: 10px;
+    }
+    
+    .update-list {
+        list-style-type: none;
+        padding-left: 0;
+    }
+    
+    .update-list li {
+        padding: 10px 15px;
+        border-left: 3px solid #3498db;
+        background-color: #f8f9fa;
+        margin-bottom: 10px;
+        border-radius: 0 5px 5px 0;
+    }
+    
+    .progress-container {
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .progress-custom {
+        height: 10px;
+        border-radius: 5px;
+        margin-bottom: 10px;
+    }
+    
+    .update-form {
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        padding: 15px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <a href="{% url 'injury_list' %}" class="btn btn-outline-secondary mb-3">
+            <i class="fas fa-arrow-left me-1"></i> Back to Injuries
+        </a>
+        
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="fas fa-heartbeat me-2"></i>Injury Details</h4>
+                <span class="status-badge badge {% if injury.status == 'active' %}bg-danger{% elif injury.status == 'recovering' %}bg-warning{% else %}bg-success{% endif %}">
+                    {{ injury.get_status_display }}
+                </span>
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">{{ injury.injury_type }}</h5>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <p><i class="fas fa-user me-1"></i> <strong>Athlete:</strong> {{ injury.athlete.full_name }}</p>
+                        <p><i class="fas fa-calendar-day me-1"></i> <strong>Injury Date:</strong> {{ injury.injury_date|date:"F d, Y" }}</p>
+                        <p><i class="fas fa-calendar-check me-1"></i> <strong>Expected Recovery:</strong> {{ injury.expected_recovery_date|date:"F d, Y" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p>
+                            <i class="fas fa-user-md me-1"></i> <strong>Physiotherapist:</strong> 
+                            {% if injury.physiotherapist %}
+                                {{ injury.physiotherapist.full_name }}
+                            {% else %}
+                                <span class="text-muted">Not assigned</span>
+                            {% endif %}
+                        </p>
+                        <p><i class="fas fa-info-circle me-1"></i> <strong>Status:</strong> {{ injury.get_status_display }}</p>
+                        
+                        {% if injury.status == 'resolved' %}
+                            <p><i class="fas fa-check-circle me-1 text-success"></i> <strong>Resolved On:</strong> {{ injury.resolution_date|date:"F d, Y" }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <h6 class="mb-2"><i class="fas fa-align-left me-1"></i> Description</h6>
+                    <div class="p-3 bg-light rounded">
+                        {{ injury.description|linebreaks }}
+                    </div>
+                </div>
+                
+                {% if injury.status != 'resolved' %}
+                    <div class="progress-container">
+                        <h6 class="mb-3"><i class="fas fa-tasks me-1"></i> Recovery Progress</h6>
+                        
+                        <div class="progress progress-custom">
+                            <div class="progress-bar {% if injury.status == 'active' %}bg-danger{% else %}bg-warning{% endif %}" 
+                                role="progressbar" 
+                                style="width: {{ injury.recovery_progress|default:0 }}%;" 
+                                aria-valuenow="{{ injury.recovery_progress|default:0 }}" 
+                                aria-valuemin="0" 
+                                aria-valuemax="100">
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <span class="small">{{ injury.recovery_progress|default:0 }}% recovery</span>
+                            
+                            {% if injury.days_until_recovery < 0 %}
+                                <span class="small text-danger">
+                                    <i class="fas fa-exclamation-triangle me-1"></i> Recovery overdue by <span class="days-overdue">{{ injury.days_until_recovery }}</span> days
+                                </span>
+                            {% elif injury.days_until_recovery <= 7 %}
+                                <span class="small text-danger">
+                                    <i class="fas fa-clock me-1"></i> {{ injury.days_until_recovery }} days to expected recovery
+                                </span>
+                            {% else %}
+                                <span class="small text-muted">
+                                    <i class="fas fa-calendar-alt me-1"></i> {{ injury.days_until_recovery }} days to expected recovery
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- Recovery Timeline -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recovery Timeline</h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-0">Injury Occurred</h6>
+                            <p class="text-muted small">{{ injury.injury_date|date:"F d, Y" }}</p>
+                            <p>{{ injury.injury_type }} was recorded.</p>
+                        </div>
+                    </div>
+                    
+                    {% if injury.status_updates %}
+                        {% for update in injury.status_updates %}
+                            <div class="timeline-item">
+                                <div class="timeline-marker"></div>
+                                <div class="timeline-content">
+                                    <h6 class="mb-0">{{ update.title }}</h6>
+                                    <p class="text-muted small">{{ update.date|date:"F d, Y" }}</p>
+                                    <p>{{ update.notes }}</p>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    {% if injury.status == 'active' %}
+                        <div class="timeline-item current">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-0">Active Injury</h6>
+                                <p class="text-muted small">Current Status</p>
+                                <p>Initial treatment and rest phase.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-0">Expected Recovery</h6>
+                                <p class="text-muted small">{{ injury.expected_recovery_date|date:"F d, Y" }}</p>
+                            </div>
+                        </div>
+                    {% elif injury.status == 'recovering' %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-0">Recovery Started</h6>
+                                <p class="text-muted small">{{ injury.recovery_start_date|date:"F d, Y"|default:"Date not recorded" }}</p>
+                                <p>Injury moved to recovery phase.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="timeline-item current">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-0">Recovering</h6>
+                                <p class="text-muted small">Current Status</p>
+                                <p>Rehabilitation and gradual return to activity.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-0">Expected Recovery</h6>
+                                <p class="text-muted small">{{ injury.expected_recovery_date|date:"F d, Y" }}</p>
+                            </div>
+                        </div>
+                    {% elif injury.status == 'resolved' %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-0">Recovery Started</h6>
+                                <p class="text-muted small">{{ injury.recovery_start_date|date:"F d, Y"|default:"Date not recorded" }}</p>
+                                <p>Injury moved to recovery phase.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="timeline-item resolved">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-0">Fully Recovered</h6>
+                                <p class="text-muted small">{{ injury.resolution_date|date:"F d, Y" }}</p>
+                                <p>Athlete has fully recovered from the injury.</p>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Treatment Notes -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-notes-medical me-2"></i>Treatment Notes</h5>
+            </div>
+            <div class="card-body">
+                <ul class="update-list">
+                    {% for note in treatment_notes %}
+                        <li>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <h6 class="mb-0">{{ note.title }}</h6>
+                                <span class="text-muted small">{{ note.date|date:"M d, Y" }}</span>
+                            </div>
+                            <p class="mb-0">{{ note.content }}</p>
+                        </li>
+                    {% empty %}
+                        <div class="text-center py-3">
+                            <p class="text-muted mb-0">No treatment notes recorded yet.</p>
+                        </div>
+                    {% endfor %}
+                </ul>
+                
+                {% if user.role == 'physio' and injury.status != 'resolved' %}
+                    <button type="button" class="btn btn-outline-primary mt-3" data-bs-toggle="modal" data-bs-target="#addTreatmentModal">
+                        <i class="fas fa-plus me-1"></i> Add Treatment Note
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Actions Panel -->
+        {% if user.role == 'physio' and injury.status != 'resolved' %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Update Status</h5>
+                </div>
+                <div class="card-body">
+                    <form action="{% url 'update_injury_status' injury.id %}" method="POST" class="update-form">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="id_status" class="form-label">Status</label>
+                            <select name="status" id="id_status" class="form-select">
+                                <option value="active" {% if injury.status == 'active' %}selected{% endif %}>Active</option>
+                                <option value="recovering" {% if injury.status == 'recovering' %}selected{% endif %}>Recovering</option>
+                                <option value="resolved" {% if injury.status == 'resolved' %}selected{% endif %}>Resolved</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_recovery_progress" class="form-label">Recovery Progress (0-100%)</label>
+                            <input type="range" class="form-range" min="0" max="100" step="5" id="id_recovery_progress" name="recovery_progress" value="{{ injury.recovery_progress|default:0 }}">
+                            <div class="d-flex justify-content-between">
+                                <span id="progress-value">{{ injury.recovery_progress|default:0 }}%</span>
+                                <span class="text-muted small">Drag to update</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_expected_recovery_date" class="form-label">Update Expected Recovery Date</label>
+                            <input type="date" name="expected_recovery_date" class="form-control" id="id_expected_recovery_date" value="{{ injury.expected_recovery_date|date:'Y-m-d' }}">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_notes" class="form-label">Status Update Notes</label>
+                            <textarea id="id_notes" name="notes" class="form-control" rows="3" placeholder="Add notes about the status change..."></textarea>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i> Update Status
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        {% endif %}
+        
+        <!-- Athlete Information -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-user me-2"></i>Athlete Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <i class="fas fa-user-circle fa-4x text-primary mb-2"></i>
+                    <h5>{{ injury.athlete.full_name }}</h5>
+                    <p class="text-muted">{{ injury.athlete.sport }}</p>
+                </div>
+                
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Gender:</span>
+                        <span>{{ injury.athlete.get_gender_display }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Birth Date:</span>
+                        <span>{{ injury.athlete.birth_date|date:"M d, Y" }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Email:</span>
+                        <span>{{ injury.athlete.user.email }}</span>
+                    </li>
+                </ul>
+                
+                <div class="mt-3">
+                    <a href="{% url 'profile' %}" class="btn btn-sm btn-outline-primary d-block">
+                        <i class="fas fa-user me-1"></i> View Profile
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Related Training Sessions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-link me-2"></i>Related Training</h5>
+            </div>
+            <div class="card-body">
+                {% if related_sessions %}
+                    <ul class="list-group list-group-flush">
+                        {% for session in related_sessions %}
+                            <li class="list-group-item">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <strong>{{ session.session_type }}</strong>
+                                        <div class="text-muted small">{{ session.session_date|date:"M d, Y" }}</div>
+                                    </div>
+                                    <span class="badge {% if session.status == 'planned' %}bg-warning{% elif session.status == 'ongoing' %}bg-primary{% else %}bg-success{% endif %}">
+                                        {{ session.get_status_display }}
+                                    </span>
+                                </div>
+                                <div class="mt-2">
+                                    <a href="{% url 'training_session_detail' session.id %}" class="btn btn-sm btn-outline-primary">View</a>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted mb-0">No related training sessions found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Treatment Note Modal -->
+{% if user.role == 'physio' %}
+    <div class="modal fade" id="addTreatmentModal" tabindex="-1" aria-labelledby="addTreatmentModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addTreatmentModalLabel">Add Treatment Note</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="{% url 'add_treatment_note' injury.id %}" method="POST">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="treatment_title" class="form-label">Title</label>
+                            <input type="text" class="form-control" id="treatment_title" name="title" required placeholder="e.g., Initial Assessment, Follow-up, Therapy Session">
+                        </div>
+                        <div class="mb-3">
+                            <label for="treatment_date" class="form-label">Date</label>
+                            <input type="date" class="form-control" id="treatment_date" name="date" required value="{{ today|date:'Y-m-d' }}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="treatment_content" class="form-label">Notes</label>
+                            <textarea class="form-control" id="treatment_content" name="content" rows="4" required placeholder="Enter details about the treatment, observations, and recommendations..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Note</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Fix for days overdue (similar to the abs filter fix)
+        const daysOverdueEl = document.querySelector('.days-overdue');
+        if (daysOverdueEl) {
+            const days = parseInt(daysOverdueEl.textContent);
+            if (days < 0) {
+                daysOverdueEl.textContent = Math.abs(days);
+            }
+        }
+        
+        // Progress slider value display
+        const progressSlider = document.getElementById('id_recovery_progress');
+        const progressValue = document.getElementById('progress-value');
+        
+        if (progressSlider && progressValue) {
+            progressSlider.addEventListener('input', function() {
+                progressValue.textContent = this.value + '%';
+            });
+            
+            // Status select changes progress max value
+            const statusSelect = document.getElementById('id_status');
+            
+            statusSelect.addEventListener('change', function() {
+                if (this.value === 'resolved') {
+                    progressSlider.value = 100;
+                    progressValue.textContent = '100%';
+                } else if (this.value === 'active' && parseInt(progressSlider.value) > 25) {
+                    progressSlider.value = 25; // Default active injuries to max 25% recovery
+                    progressValue.textContent = '25%';
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

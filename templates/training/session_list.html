@@ -1,45 +1,688 @@
-<!-- templates/training/session_list.html -->
 {% extends 'base.html' %}
 
-{% block title %}Training Sessions{% endblock %}
+{% block title %}Training Sessions - Athletic Coach{% endblock %}
+
+{% block extra_css %}
+<style>
+    .session-card {
+        border-left: 5px solid;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .session-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+    
+    .session-planned { border-left-color: #f39c12; }
+    .session-ongoing { border-left-color: #3498db; }
+    .session-completed { border-left-color: #2ecc71; }
+    
+    .status-badge {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+    }
+    
+    .session-filters .btn {
+        margin-right: 5px;
+        margin-bottom: 5px;
+    }
+    
+    .calendar-view {
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        padding: 15px;
+    }
+    
+    .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    
+    .calendar-title {
+        font-weight: bold;
+        font-size: 1.2rem;
+    }
+    
+    .calendar-nav button {
+        background: none;
+        border: none;
+        font-size: 1.2rem;
+        cursor: pointer;
+        color: #3498db;
+    }
+    
+    .calendar-weekdays {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        text-align: center;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+    
+    .calendar-days {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        grid-gap: 5px;
+    }
+    
+    .calendar-day {
+        aspect-ratio: 1/1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border-radius: 5px;
+        border: 1px solid #dee2e6;
+        background-color: white;
+        position: relative;
+    }
+    
+    .calendar-day.empty {
+        background-color: #f8f9fa;
+        border: 1px solid #f8f9fa;
+    }
+    
+    .calendar-day.today {
+        border: 2px solid #3498db;
+        font-weight: bold;
+    }
+    
+    .calendar-day.has-session {
+        background-color: rgba(52, 152, 219, 0.1);
+    }
+    
+    .calendar-day.has-session::after {
+        content: '';
+        position: absolute;
+        bottom: 5px;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background-color: #3498db;
+    }
+    
+    .calendar-day-number {
+        font-size: 0.9rem;
+    }
+    
+    .list-view-switch, .calendar-view-switch {
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header">
-        Training Sessions
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h2 class="mb-0"><i class="fas fa-dumbbell me-2"></i>Training Sessions</h2>
+        <p class="text-muted">
+            {% if user.role == 'coach' %}
+                Manage your training sessions with athletes.
+            {% else %}
+                View your scheduled training sessions.
+            {% endif %}
+        </p>
+    </div>
+    <div class="col-md-6 text-md-end">
         {% if user.role == 'coach' %}
-        <a href="{% url 'create_training_session' %}" class="btn btn-primary btn-sm float-end">Create New Session</a>
+            <a href="{% url 'create_training_session' %}" class="btn btn-success">
+                <i class="fas fa-plus me-1"></i> Create New Session
+            </a>
         {% endif %}
     </div>
-    <div class="card-body">
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Athlete</th>
-                    <th>Date</th>
-                    <th>Type</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for session in sessions %}
-                    <tr>
-                        <td>{{ session.athlete.full_name }}</td>
-                        <td>{{ session.session_date }}</td>
-                        <td>{{ session.session_type }}</td>
-                        <td>{{ session.get_status_display }}</td>
-                        <td>
-                            <a href="{% url 'training_session_detail' session.id %}" class="btn btn-info btn-sm">View</a>
-                        </td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="5" class="text-center">No training sessions found</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+</div>
+
+<!-- View Toggle -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filters & View</h5>
+                    </div>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-primary active" id="list-view-btn">
+                            <i class="fas fa-list me-1"></i> List View
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" id="calendar-view-btn">
+                            <i class="fas fa-calendar-alt me-1"></i> Calendar View
+                        </button>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="session-filters">
+                    <div class="mb-3">
+                        <span class="me-2">Status:</span>
+                        <button class="btn btn-sm btn-light active filter-btn" data-filter="all">All</button>
+                        <button class="btn btn-sm btn-warning filter-btn" data-filter="planned">Planned</button>
+                        <button class="btn btn-sm btn-primary filter-btn" data-filter="ongoing">Ongoing</button>
+                        <button class="btn btn-sm btn-success filter-btn" data-filter="completed">Completed</button>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <span class="me-2">Time:</span>
+                        <button class="btn btn-sm btn-light active filter-time-btn" data-filter-time="all">All Time</button>
+                        <button class="btn btn-sm btn-light filter-time-btn" data-filter-time="today">Today</button>
+                        <button class="btn btn-sm btn-light filter-time-btn" data-filter-time="week">This Week</button>
+                        <button class="btn btn-sm btn-light filter-time-btn" data-filter-time="month">This Month</button>
+                        <button class="btn btn-sm btn-light filter-time-btn" data-filter-time="past">Past Sessions</button>
+                        <button class="btn btn-sm btn-light filter-time-btn" data-filter-time="future">Upcoming Sessions</button>
+                    </div>
+                    
+                    {% if user.role == 'coach' %}
+                        <div class="mb-0">
+                            <span class="me-2">Athlete:</span>
+                            <select class="form-select form-select-sm d-inline-block w-auto" id="athlete-filter">
+                                <option value="all" selected>All Athletes</option>
+                                {% for athlete in athletes %}
+                                    <option value="{{ athlete.id }}">{{ athlete.full_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+
+<!-- List View -->
+<div id="list-view" class="row">
+    {% if sessions %}
+        {% for session in sessions %}
+            <div class="col-md-6 mb-4 session-item" 
+                data-status="{{ session.status }}" 
+                data-type="{{ session.session_type }}" 
+                data-date="{{ session.session_date|date:'Y-m-d' }}"
+                data-athlete="{{ session.athlete.id }}">
+                <div class="card session-card h-100 session-{{ session.status }}">
+                    <div class="card-body">
+                        <span class="status-badge badge {% if session.status == 'planned' %}bg-warning{% elif session.status == 'ongoing' %}bg-primary{% else %}bg-success{% endif %}">
+                            {{ session.get_status_display }}
+                        </span>
+                        <h5 class="card-title">{{ session.session_type }}</h5>
+                        
+                        <div class="mb-3">
+                            <i class="far fa-calendar-alt me-1"></i> {{ session.session_date|date:"l, F j, Y" }}<br>
+                            <i class="far fa-clock me-1"></i> {{ session.session_date|date:"g:i A" }}
+                        </div>
+                        
+                        <div class="d-flex align-items-center mb-3">
+                            {% if user.role == 'coach' %}
+                                <i class="fas fa-user-alt me-2"></i> Athlete: <strong class="ms-1">{{ session.athlete.full_name }}</strong>
+                            {% else %}
+                                <i class="fas fa-user-tie me-2"></i> Coach: <strong class="ms-1">{{ session.coach.full_name }}</strong>
+                            {% endif %}
+                        </div>
+                        
+                        <p class="card-text">{{ session.description|truncatechars:150 }}</p>
+                        
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <a href="{% url 'training_session_detail' session.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye me-1"></i> View Details
+                            </a>
+                            
+                            {% if user.role == 'coach' and session.status != 'completed' %}
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                        <i class="fas fa-cog me-1"></i> Actions
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li>
+                                            <a class="dropdown-item" href="#">
+                                                <i class="fas fa-edit me-1"></i> Edit Session
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item update-status" href="#" data-session-id="{{ session.id }}" data-status="ongoing">
+                                                <i class="fas fa-play me-1"></i> Mark as Ongoing
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item update-status" href="#" data-session-id="{{ session.id }}" data-status="completed">
+                                                <i class="fas fa-check me-1"></i> Mark as Completed
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item text-danger" href="#">
+                                                <i class="fas fa-trash-alt me-1"></i> Cancel Session
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="col-md-12">
+            <div class="text-center py-5">
+                <i class="fas fa-dumbbell fa-3x mb-3 text-muted"></i>
+                <h5>No training sessions found</h5>
+                {% if user.role == 'coach' %}
+                    <p class="text-muted">Start by creating your first training session.</p>
+                    <a href="{% url 'create_training_session' %}" class="btn btn-primary mt-2">
+                        <i class="fas fa-plus me-1"></i> Create Training Session
+                    </a>
+                {% else %}
+                    <p class="text-muted">No training sessions have been scheduled for you yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Calendar View -->
+<div id="calendar-view" class="row d-none">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="calendar-view">
+                    <div class="calendar-header">
+                        <div class="calendar-nav">
+                            <button id="prev-month"><i class="fas fa-chevron-left"></i></button>
+                        </div>
+                        <div class="calendar-title" id="calendar-month-year"></div>
+                        <div class="calendar-nav">
+                            <button id="next-month"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                    <div class="calendar-weekdays">
+                        <div>Sun</div>
+                        <div>Mon</div>
+                        <div>Tue</div>
+                        <div>Wed</div>
+                        <div>Thu</div>
+                        <div>Fri</div>
+                        <div>Sat</div>
+                    </div>
+                    <div class="calendar-days" id="calendar-days">
+                        <!-- Calendar will be generated here -->
+                    </div>
+                </div>
+                
+                <div class="mt-4" id="day-sessions">
+                    <h5 class="mb-3" id="selected-date-heading">No date selected</h5>
+                    <div id="day-sessions-list">
+                        <!-- Sessions for the selected day will appear here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // View Toggle
+        const listViewBtn = document.getElementById('list-view-btn');
+        const calendarViewBtn = document.getElementById('calendar-view-btn');
+        const listView = document.getElementById('list-view');
+        const calendarView = document.getElementById('calendar-view');
+        
+        listViewBtn.addEventListener('click', function() {
+            listView.classList.remove('d-none');
+            calendarView.classList.add('d-none');
+            listViewBtn.classList.add('active');
+            calendarViewBtn.classList.remove('active');
+        });
+        
+        calendarViewBtn.addEventListener('click', function() {
+            listView.classList.add('d-none');
+            calendarView.classList.remove('d-none');
+            listViewBtn.classList.remove('active');
+            calendarViewBtn.classList.add('active');
+            renderCalendar(currentMonth, currentYear);
+        });
+        
+        // Filters functionality
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        const filterTimeButtons = document.querySelectorAll('.filter-time-btn');
+        const athleteFilter = document.getElementById('athlete-filter');
+        
+        // Status filters
+        filterButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                // Update active button
+                filterButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                // Apply filters
+                applyFilters();
+            });
+        });
+        
+        // Time filters
+        filterTimeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                // Update active button
+                filterTimeButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                // Apply filters
+                applyFilters();
+            });
+        });
+        
+        // Athlete filter
+        if (athleteFilter) {
+            athleteFilter.addEventListener('change', () => {
+                applyFilters();
+            });
+        }
+        
+        function applyFilters() {
+            const statusFilter = document.querySelector('.filter-btn.active').getAttribute('data-filter');
+            const timeFilter = document.querySelector('.filter-time-btn.active').getAttribute('data-filter-time');
+            const athleteId = athleteFilter ? athleteFilter.value : 'all';
+            
+            const sessionItems = document.querySelectorAll('.session-item');
+            let visibleCount = 0;
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const weekStart = new Date(today);
+            weekStart.setDate(today.getDate() - today.getDay());
+            
+            const weekEnd = new Date(today);
+            weekEnd.setDate(weekStart.getDate() + 6);
+            
+            const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+            const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            
+            sessionItems.forEach(item => {
+                const status = item.getAttribute('data-status');
+                const sessionDate = new Date(item.getAttribute('data-date'));
+                const sessionAthlete = item.getAttribute('data-athlete');
+                
+                // Determine if session should be visible based on filters
+                let isVisible = true;
+                
+                // Apply status filter
+                if (statusFilter !== 'all' && status !== statusFilter) {
+                    isVisible = false;
+                }
+                
+                // Apply time filter
+                if (timeFilter !== 'all') {
+                    if (timeFilter === 'today') {
+                        // Check if session is today
+                        const sessionDay = sessionDate.getDate();
+                        const sessionMonth = sessionDate.getMonth();
+                        const sessionYear = sessionDate.getFullYear();
+                        
+                        const currentDay = today.getDate();
+                        const currentMonth = today.getMonth();
+                        const currentYear = today.getFullYear();
+                        
+                        if (sessionDay !== currentDay || sessionMonth !== currentMonth || sessionYear !== currentYear) {
+                            isVisible = false;
+                        }
+                    } else if (timeFilter === 'week') {
+                        // Check if session is this week
+                        if (sessionDate < weekStart || sessionDate > weekEnd) {
+                            isVisible = false;
+                        }
+                    } else if (timeFilter === 'month') {
+                        // Check if session is this month
+                        if (sessionDate < monthStart || sessionDate > monthEnd) {
+                            isVisible = false;
+                        }
+                    } else if (timeFilter === 'past') {
+                        // Check if session is in the past
+                        if (sessionDate >= today) {
+                            isVisible = false;
+                        }
+                    } else if (timeFilter === 'future') {
+                        // Check if session is in the future
+                        if (sessionDate < today) {
+                            isVisible = false;
+                        }
+                    }
+                }
+                
+                // Apply athlete filter
+                if (athleteId !== 'all' && sessionAthlete !== athleteId) {
+                    isVisible = false;
+                }
+                
+                // Show or hide the session
+                item.style.display = isVisible ? '' : 'none';
+                
+                // Count visible items
+                if (isVisible) {
+                    visibleCount++;
+                }
+            });
+            
+            // Show message if no sessions match filters
+            const noSessionsMessage = document.querySelector('.col-md-12 .text-center');
+            const noMatchingSessions = document.getElementById('no-matching-sessions');
+            
+            if (visibleCount === 0 && sessionItems.length > 0) {
+                // No sessions match the filters
+                if (!noMatchingSessions) {
+                    const message = document.createElement('div');
+                    message.id = 'no-matching-sessions';
+                    message.className = 'col-md-12';
+                    message.innerHTML = `
+                        <div class="text-center py-5">
+                            <i class="fas fa-filter fa-3x mb-3 text-muted"></i>
+                            <h5>No sessions match your filters</h5>
+                            <p class="text-muted">Try adjusting your filter criteria.</p>
+                            <button class="btn btn-primary mt-2 reset-filters">
+                                <i class="fas fa-undo me-1"></i> Reset Filters
+                            </button>
+                        </div>
+                    `;
+                    listView.appendChild(message);
+                    
+                    // Add reset filters functionality
+                    document.querySelector('.reset-filters').addEventListener('click', resetFilters);
+                }
+            } else {
+                // Remove no matching sessions message if it exists
+                if (noMatchingSessions) {
+                    noMatchingSessions.remove();
+                }
+            }
+        }
+        
+        function resetFilters() {
+            // Reset status filter
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            document.querySelector('[data-filter="all"]').classList.add('active');
+            
+            // Reset time filter
+            filterTimeButtons.forEach(btn => btn.classList.remove('active'));
+            document.querySelector('[data-filter-time="all"]').classList.add('active');
+            
+            // Reset athlete filter
+            if (athleteFilter) {
+                athleteFilter.value = 'all';
+            }
+            
+            // Apply reset filters
+            applyFilters();
+        }
+        
+        // Calendar View
+        let currentMonth = new Date().getMonth();
+        let currentYear = new Date().getFullYear();
+        
+        // Calendar navigation
+        document.getElementById('prev-month').addEventListener('click', function() {
+            currentMonth--;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            renderCalendar(currentMonth, currentYear);
+        });
+        
+        document.getElementById('next-month').addEventListener('click', function() {
+            currentMonth++;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+            renderCalendar(currentMonth, currentYear);
+        });
+        
+        function renderCalendar(month, year) {
+            const calendarDays = document.getElementById('calendar-days');
+            const monthYearText = document.getElementById('calendar-month-year');
+            
+            calendarDays.innerHTML = '';
+            
+            // Set the month and year in the header
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                               'July', 'August', 'September', 'October', 'November', 'December'];
+            monthYearText.textContent = `${monthNames[month]} ${year}`;
+            
+            // Get the first day of the month and the total days in the month
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            // Fill in the empty cells before the first day of the month
+            for (let i = 0; i < firstDay; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'calendar-day empty';
+                calendarDays.appendChild(emptyDay);
+            }
+            
+            // Create the calendar days
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayCell = document.createElement('div');
+                dayCell.className = 'calendar-day';
+                
+                // Add the day number
+                const dayNumber = document.createElement('div');
+                dayNumber.className = 'calendar-day-number';
+                dayNumber.textContent = day;
+                dayCell.appendChild(dayNumber);
+                
+                // Check if it's today
+                const today = new Date();
+                if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+                    dayCell.classList.add('today');
+                }
+                
+                // Check if there are sessions on this day
+                const sessions = document.querySelectorAll('.session-item');
+                const sessionsOnDay = [];
+                
+                sessions.forEach(session => {
+                    const sessionDate = new Date(session.getAttribute('data-date'));
+                    
+                    if (
+                        sessionDate.getDate() === day && 
+                        sessionDate.getMonth() === month && 
+                        sessionDate.getFullYear() === year
+                    ) {
+                        sessionsOnDay.push(session);
+                        
+                        // Mark day as having a session
+                        dayCell.classList.add('has-session');
+                    }
+                });
+                
+                // Make day clickable if it has sessions
+                if (sessionsOnDay.length > 0) {
+                    dayCell.style.cursor = 'pointer';
+                    dayCell.addEventListener('click', function() {
+                        showSessionsForDay(day, month, year, sessionsOnDay);
+                    });
+                }
+                
+                calendarDays.appendChild(dayCell);
+            }
+        }
+        
+        function showSessionsForDay(day, month, year, sessions) {
+            const selectedDateHeading = document.getElementById('selected-date-heading');
+            const daySessionsList = document.getElementById('day-sessions-list');
+            
+            // Format the date
+            const date = new Date(year, month, day);
+            const formattedDate = date.toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            
+            selectedDateHeading.textContent = `Sessions on ${formattedDate}`;
+            
+            // Clear previous content
+            daySessionsList.innerHTML = '';
+            
+            // Add sessions for this day
+            if (sessions.length > 0) {
+                sessions.forEach(session => {
+                    // Clone the session card
+                    const sessionCard = session.cloneNode(true);
+                    sessionCard.classList.remove('col-md-6');
+                    sessionCard.classList.add('mb-3');
+                    daySessionsList.appendChild(sessionCard);
+                });
+            } else {
+                daySessionsList.innerHTML = '<p class="text-muted">No sessions scheduled for this day.</p>';
+            }
+            
+            // Highlight the selected day
+            document.querySelectorAll('.calendar-day').forEach(day => {
+                day.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+        }
+        
+        // Update session status functionality
+        const updateStatusLinks = document.querySelectorAll('.update-status');
+        
+        updateStatusLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const sessionId = this.getAttribute('data-session-id');
+                const newStatus = this.getAttribute('data-status');
+                
+                // In a real app, you would make an AJAX request to update the status
+                console.log(`Update session ${sessionId} to status ${newStatus}`);
+                
+                // For demo purposes, update the UI directly
+                const sessionCard = document.querySelector(`.session-item[data-session-id="${sessionId}"]`);
+                if (sessionCard) {
+                    // Update status attribute
+                    sessionCard.setAttribute('data-status', newStatus);
+                    
+                    // Update status class
+                    sessionCard.querySelector('.session-card').className = `card session-card h-100 session-${newStatus}`;
+                    
+                    // Update status badge
+                    const statusBadge = sessionCard.querySelector('.status-badge');
+                    statusBadge.className = `status-badge badge ${newStatus === 'planned' ? 'bg-warning' : newStatus === 'ongoing' ? 'bg-primary' : 'bg-success'}`;
+                    statusBadge.textContent = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+                    
+                    // Apply filters again to handle potential status changes
+                    applyFilters();
+                }
+            });
+        });
+    });
+</script>
 {% endblock %}

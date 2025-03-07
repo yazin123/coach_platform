@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+
+{% block title %}Update Injury - Athletic Coach{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0"><i class="fas fa-edit me-2"></i>Update Injury Record</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" novalidate>
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="id_athlete" class="form-label">Athlete</label>
+                        <input type="text" class="form-control" value="{{ injury.athlete.full_name }}" disabled>
+                        <input type="hidden" name="athlete" value="{{ injury.athlete.id }}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_injury_type" class="form-label">Injury Type</label>
+                        <select name="injury_type" class="form-select" id="id_injury_type" required>
+                            <option value="">Select injury type</option>
+                            <option value="Sprain" {% if injury.injury_type == "Sprain" %}selected{% endif %}>Sprain</option>
+                            <option value="Strain" {% if injury.injury_type == "Strain" %}selected{% endif %}>Strain</option>
+                            <option value="Fracture" {% if injury.injury_type == "Fracture" %}selected{% endif %}>Fracture</option>
+                            <option value="Dislocation" {% if injury.injury_type == "Dislocation" %}selected{% endif %}>Dislocation</option>
+                            <option value="Contusion" {% if injury.injury_type == "Contusion" %}selected{% endif %}>Contusion</option>
+                            <option value="Laceration" {% if injury.injury_type == "Laceration" %}selected{% endif %}>Laceration</option>
+                            <option value="Tendonitis" {% if injury.injury_type == "Tendonitis" %}selected{% endif %}>Tendonitis</option>
+                            <option value="Bursitis" {% if injury.injury_type == "Bursitis" %}selected{% endif %}>Bursitis</option>
+                            <option value="Concussion" {% if injury.injury_type == "Concussion" %}selected{% endif %}>Concussion</option>
+                            <option value="Other" {% if injury.injury_type not in "Sprain,Strain,Fracture,Dislocation,Contusion,Laceration,Tendonitis,Bursitis,Concussion" %}selected{% endif %}>Other</option>
+                        </select>
+                    </div>
+                    
+                    <div id="other_injury_container" class="mb-3" {% if injury.injury_type in "Sprain,Strain,Fracture,Dislocation,Contusion,Laceration,Tendonitis,Bursitis,Concussion" %}style="display: none;"{% endif %}>
+                        <label for="id_other_injury_type" class="form-label">Specify Injury Type</label>
+                        <input type="text" name="other_injury_type" class="form-control" id="id_other_injury_type" value="{{ injury.injury_type }}">
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="id_injury_date" class="form-label">Injury Date</label>
+                            <input type="date" name="injury_date" class="form-control" id="id_injury_date" value="{{ injury.injury_date|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="id_expected_recovery_date" class="form-label">Expected Recovery Date</label>
+                            <input type="date" name="expected_recovery_date" class="form-control" id="id_expected_recovery_date" value="{{ injury.expected_recovery_date|date:'Y-m-d' }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_description" class="form-label">Description</label>
+                        <textarea name="description" class="form-control" id="id_description" rows="4" required>{{ injury.description }}</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_status" class="form-label">Status</label>
+                        <select name="status" class="form-select" id="id_status" required>
+                            <option value="active" {% if injury.status == 'active' %}selected{% endif %}>Active</option>
+                            <option value="recovering" {% if injury.status == 'recovering' %}selected{% endif %}>Recovering</option>
+                            <option value="resolved" {% if injury.status == 'resolved' %}selected{% endif %}>Resolved</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_recovery_progress" class="form-label">Recovery Progress (0-100%)</label>
+                        <input type="range" class="form-range" min="0" max="100" step="5" id="id_recovery_progress" name="recovery_progress" value="{{ injury.recovery_progress|default:0 }}">
+                        <div class="d-flex justify-content-between">
+                            <span id="progress-value">{{ injury.recovery_progress|default:0 }}%</span>
+                            <span class="text-muted small">Drag to update</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_update_notes" class="form-label">Update Notes</label>
+                        <textarea name="update_notes" class="form-control" id="id_update_notes" rows="3" placeholder="Add notes about this update..."></textarea>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i> Update Injury Record
+                        </button>
+                        <a href="{% url 'injury_detail' injury.id %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-1"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle "Other" injury type selection
+        const injuryTypeSelect = document.getElementById('id_injury_type');
+        const otherInjuryContainer = document.getElementById('other_injury_container');
+        const otherInjuryInput = document.getElementById('id_other_injury_type');
+        
+        injuryTypeSelect.addEventListener('change', function() {
+            if (this.value === 'Other') {
+                otherInjuryContainer.style.display = 'block';
+                otherInjuryInput.setAttribute('required', 'required');
+            } else {
+                otherInjuryContainer.style.display = 'none';
+                otherInjuryInput.removeAttribute('required');
+            }
+        });
+        
+        // Progress slider value display
+        const progressSlider = document.getElementById('id_recovery_progress');
+        const progressValue = document.getElementById('progress-value');
+        
+        progressSlider.addEventListener('input', function() {
+            progressValue.textContent = this.value + '%';
+        });
+        
+        // Status changes progress value
+        const statusSelect = document.getElementById('id_status');
+        
+        statusSelect.addEventListener('change', function() {
+            if (this.value === 'resolved') {
+                progressSlider.value = 100;
+                progressValue.textContent = '100%';
+            } else if (this.value === 'active' && parseInt(progressSlider.value) > 25) {
+                progressSlider.value = 25; // Reset to lower progress for active injuries
+                progressValue.textContent = '25%';
+            }
+        });
+        
+        // Ensure recovery date is after injury date
+        const injuryDateInput = document.getElementById('id_injury_date');
+        const recoveryDateInput = document.getElementById('id_expected_recovery_date');
+        
+        injuryDateInput.addEventListener('change', function() {
+            const injuryDate = new Date(this.value);
+            const recoveryDate = new Date(recoveryDateInput.value);
+            
+            if (recoveryDate <= injuryDate) {
+                // Set recovery date to 2 weeks after injury date
+                injuryDate.setDate(injuryDate.getDate() + 14);
+                
+                const newRecYear = injuryDate.getFullYear();
+                const newRecMonth = String(injuryDate.getMonth() + 1).padStart(2, '0');
+                const newRecDay = String(injuryDate.getDate()).padStart(2, '0');
+                
+                recoveryDateInput.value = `${newRecYear}-${newRecMonth}-${newRecDay}`;
+            }
+        });
+        
+        recoveryDateInput.addEventListener('change', function() {
+            const injuryDate = new Date(injuryDateInput.value);
+            const recoveryDate = new Date(this.value);
+            
+            if (recoveryDate <= injuryDate) {
+                this.classList.add('is-invalid');
+                alert('Recovery date must be after the injury date');
+            } else {
+                this.classList.remove('is-invalid');
+            }
+        });
+        
+        // Form validation
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function(event) {
+            let isValid = true;
+            
+            // Check required fields
+            const requiredFields = form.querySelectorAll('[required]');
+            requiredFields.forEach(field => {
+                if (!field.value) {
+                    field.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    field.classList.remove('is-invalid');
+                }
+            });
+            
+            // Check recovery date is after injury date
+            const injuryDate = new Date(injuryDateInput.value);
+            const recoveryDate = new Date(recoveryDateInput.value);
+            
+            if (recoveryDate <= injuryDate) {
+                recoveryDateInput.classList.add('is-invalid');
+                isValid = false;
+            }
+            
+            if (!isValid) {
+                event.preventDefault();
+                
+                // Show an alert at the top of the form
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+                alertDiv.role = 'alert';
+                alertDiv.innerHTML = `
+                    <strong>Please correct the errors:</strong>
+                    <ul>
+                        <li>Fill in all required fields.</li>
+                        <li>Ensure the recovery date is after the injury date.</li>
+                    </ul>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+                
+                form.prepend(alertDiv);
+            }
+        });
+    });
+</script>
+{% endblock %}

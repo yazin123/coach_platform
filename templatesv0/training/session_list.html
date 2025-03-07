@@ -1,0 +1,45 @@
+<!-- templates/training/session_list.html -->
+{% extends 'base.html' %}
+
+{% block title %}Training Sessions{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        Training Sessions
+        {% if user.role == 'coach' %}
+        <a href="{% url 'create_training_session' %}" class="btn btn-primary btn-sm float-end">Create New Session</a>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Athlete</th>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for session in sessions %}
+                    <tr>
+                        <td>{{ session.athlete.full_name }}</td>
+                        <td>{{ session.session_date }}</td>
+                        <td>{{ session.session_type }}</td>
+                        <td>{{ session.get_status_display }}</td>
+                        <td>
+                            <a href="{% url 'training_session_detail' session.id %}" class="btn btn-info btn-sm">View</a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center">No training sessions found</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

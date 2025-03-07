@@ -1,80 +1,295 @@
-<!-- templates/training/create_session.html -->
 {% extends 'base.html' %}
 
-{% block title %}Create Training Session{% endblock %}
+{% block title %}Create Training Session - Athletic Coach{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8">
         <div class="card">
-            <div class="card-header">Create Training Session</div>
+            <div class="card-header">
+                <h4 class="mb-0"><i class="fas fa-running me-2"></i>Create Training Session</h4>
+            </div>
             <div class="card-body">
-                <form method="post">
+                <form method="POST" novalidate>
                     {% csrf_token %}
+                    
                     <div class="mb-3">
-                        <label for="{{ form.athlete.id_for_label }}" class="form-label">Select Athlete</label>
-                        {{ form.athlete }}
-                        {% if form.athlete.errors %}
-                            <div class="text-danger">
-                                {% for error in form.athlete.errors %}
-                                    {{ error }}
-                                {% endfor %}
-                            </div>
-                        {% endif %}
+                        <label for="id_athlete" class="form-label">Athlete</label>
+                        <select name="athlete" id="id_athlete" class="form-select" required>
+                            <option value="">Select an athlete</option>
+                            {% for athlete in athletes %}
+                                <option value="{{ athlete.user.id }}">{{ athlete.full_name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Select the athlete for this training session.</div>
                     </div>
-
+                    
                     <div class="mb-3">
-                        <label for="{{ form.session_date.id_for_label }}" class="form-label">Session Date</label>
-                        {{ form.session_date }}
-                        {% if form.session_date.errors %}
-                            <div class="text-danger">
-                                {% for error in form.session_date.errors %}
-                                    {{ error }}
-                                {% endfor %}
-                            </div>
-                        {% endif %}
+                        <label for="id_session_date" class="form-label">Session Date & Time</label>
+                        <input type="datetime-local" name="session_date" id="id_session_date" class="form-control" required>
+                        <div class="form-text">When will this training session take place?</div>
                     </div>
-
+                    
                     <div class="mb-3">
-                        <label for="{{ form.session_type.id_for_label }}" class="form-label">Session Type</label>
-                        {{ form.session_type }}
-                        {% if form.session_type.errors %}
-                            <div class="text-danger">
-                                {% for error in form.session_type.errors %}
-                                    {{ error }}
-                                {% endfor %}
-                            </div>
-                        {% endif %}
+                        <label for="id_session_type" class="form-label">Session Type</label>
+                        <select name="session_type" id="id_session_type" class="form-select" required>
+                            <option value="">Select a session type</option>
+                            <option value="Strength">Strength Training</option>
+                            <option value="Endurance">Endurance Training</option>
+                            <option value="Technique">Technique Training</option>
+                            <option value="Recovery">Recovery Session</option>
+                            <option value="Assessment">Performance Assessment</option>
+                            <option value="Competition">Competition Preparation</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <div class="form-text">What type of training session is this?</div>
                     </div>
-
+                    
+                    <div id="custom_type_container" class="mb-3 d-none">
+                        <label for="id_custom_type" class="form-label">Custom Session Type</label>
+                        <input type="text" id="id_custom_type" class="form-control" placeholder="Specify the session type">
+                    </div>
+                    
                     <div class="mb-3">
-                        <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
-                        {{ form.description }}
-                        {% if form.description.errors %}
-                            <div class="text-danger">
-                                {% for error in form.description.errors %}
-                                    {{ error }}
-                                {% endfor %}
-                            </div>
-                        {% endif %}
+                        <label for="id_description" class="form-label">Description</label>
+                        <textarea name="description" id="id_description" class="form-control" rows="5" required></textarea>
+                        <div class="form-text">Provide details about the training session, including exercises, durations, intensities, etc.</div>
                     </div>
-
+                    
                     <div class="mb-3">
-                        <label for="{{ form.status.id_for_label }}" class="form-label">Status</label>
-                        {{ form.status }}
-                        {% if form.status.errors %}
-                            <div class="text-danger">
-                                {% for error in form.status.errors %}
-                                    {{ error }}
-                                {% endfor %}
-                            </div>
-                        {% endif %}
+                        <label for="id_status" class="form-label">Status</label>
+                        <select name="status" id="id_status" class="form-select" required>
+                            <option value="planned" selected>Planned</option>
+                            <option value="ongoing">Ongoing</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                        <div class="form-text">Current status of the training session.</div>
                     </div>
-
-                    <button type="submit" class="btn btn-primary">Create Session</button>
+                    
+                    <div class="card mb-3 border-0 bg-light">
+                        <div class="card-body">
+                            <h5 class="mb-3">Session Templates</h5>
+                            <div class="row row-cols-1 row-cols-md-3 g-3">
+                                <div class="col">
+                                    <div class="card h-100 template-card" data-template="strength">
+                                        <div class="card-body">
+                                            <h6 class="card-title">Strength Template</h6>
+                                            <p class="card-text text-muted small">Load this template for a standard strength training session.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="card h-100 template-card" data-template="endurance">
+                                        <div class="card-body">
+                                            <h6 class="card-title">Endurance Template</h6>
+                                            <p class="card-text text-muted small">Load this template for an endurance-focused session.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="card h-100 template-card" data-template="technique">
+                                        <div class="card-body">
+                                            <h6 class="card-title">Technique Template</h6>
+                                            <p class="card-text text-muted small">Load this template for technique improvement.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i> Create Session
+                        </button>
+                        <a href="{% url 'training_session_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-1"></i> Cancel
+                        </a>
+                    </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Custom Session Type Handler
+        const sessionTypeSelect = document.getElementById('id_session_type');
+        const customTypeContainer = document.getElementById('custom_type_container');
+        const customTypeInput = document.getElementById('id_custom_type');
+        
+        sessionTypeSelect.addEventListener('change', function() {
+            if (this.value === 'Other') {
+                customTypeContainer.classList.remove('d-none');
+                customTypeInput.setAttribute('required', 'required');
+            } else {
+                customTypeContainer.classList.add('d-none');
+                customTypeInput.removeAttribute('required');
+                customTypeInput.value = '';
+            }
+        });
+        
+        // Set minimum date and time to now
+        const sessionDateInput = document.getElementById('id_session_date');
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        
+        const currentDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+        sessionDateInput.min = currentDateTime;
+        
+        // Default to 1 hour from now
+        const defaultDate = new Date(now.getTime() + 60 * 60 * 1000);
+        const defaultYear = defaultDate.getFullYear();
+        const defaultMonth = String(defaultDate.getMonth() + 1).padStart(2, '0');
+        const defaultDay = String(defaultDate.getDate()).padStart(2, '0');
+        const defaultHours = String(defaultDate.getHours()).padStart(2, '0');
+        const defaultMinutes = String(defaultDate.getMinutes()).padStart(2, '0');
+        
+        const defaultDateTime = `${defaultYear}-${defaultMonth}-${defaultDay}T${defaultHours}:${defaultMinutes}`;
+        sessionDateInput.value = defaultDateTime;
+        
+        // Template cards
+        const templateCards = document.querySelectorAll('.template-card');
+        const descriptionTextarea = document.getElementById('id_description');
+        
+        const templates = {
+            strength: `Strength Training Session
+
+Warm-up (10 minutes):
+- 5 minutes light cardio (jogging, cycling, or rowing)
+- Dynamic stretching
+- Joint mobility exercises
+
+Main Session (40 minutes):
+1. Squat: 4 sets of 8 reps
+2. Bench Press: 4 sets of 8 reps
+3. Deadlift: 3 sets of 6 reps
+4. Pull-ups: 3 sets to failure
+5. Core exercises: 3 sets of 30 seconds each
+
+Cool-down (10 minutes):
+- Static stretching
+- Foam rolling
+
+Notes:
+- Focus on proper form
+- Adjust weights as needed for each athlete
+- Monitor for signs of fatigue`,
+
+            endurance: `Endurance Training Session
+
+Warm-up (15 minutes):
+- 10 minutes progressive cardio (increasing intensity)
+- Dynamic stretching
+- Activation exercises
+
+Main Session (45 minutes):
+1. Interval Training:
+   - 10 x 400m runs with 90 seconds recovery
+   - Target heart rate: 80-85% of max HR
+
+2. Tempo Run:
+   - 15 minutes at moderate-high intensity (75-80% of max HR)
+
+Cool-down (10 minutes):
+- 5 minutes light jogging
+- Static stretching
+
+Notes:
+- Monitor heart rate throughout
+- Maintain consistent pace during intervals
+- Stay hydrated throughout the session`,
+
+            technique: `Technique Improvement Session
+
+Warm-up (15 minutes):
+- 5 minutes light cardio
+- Dynamic stretching
+- Sport-specific movement patterns
+
+Main Session (50 minutes):
+1. Technique Analysis (15 minutes):
+   - Video analysis of current form
+   - Identify 2-3 key areas for improvement
+
+2. Drill Series (30 minutes):
+   - 5-6 progressive drills focusing on identified areas
+   - 3-4 sets of each drill with coaching feedback
+
+3. Implementation (15 minutes):
+   - Integrate improvements into full movement patterns
+   - Practice in game-like situations
+
+Cool-down (10 minutes):
+- Light mobility work
+- Static stretching
+
+Notes:
+- Focus on quality over quantity
+- Provide continuous feedback
+- Video record for comparison and review`
+        };
+        
+        templateCards.forEach(card => {
+            card.addEventListener('click', function() {
+                const template = this.getAttribute('data-template');
+                const templateContent = templates[template];
+                
+                if (templateContent) {
+                    descriptionTextarea.value = templateContent;
+                    
+                    // Update session type select to match template
+                    switch(template) {
+                        case 'strength':
+                            sessionTypeSelect.value = 'Strength';
+                            break;
+                        case 'endurance':
+                            sessionTypeSelect.value = 'Endurance';
+                            break;
+                        case 'technique':
+                            sessionTypeSelect.value = 'Technique';
+                            break;
+                    }
+                    
+                    // Trigger the change event to handle custom type container
+                    const event = new Event('change');
+                    sessionTypeSelect.dispatchEvent(event);
+                }
+                
+                // Highlight the selected template
+                templateCards.forEach(c => c.classList.remove('border-primary'));
+                this.classList.add('border-primary');
+            });
+        });
+        
+        // Form validation
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function(event) {
+            if (!this.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            this.classList.add('was-validated');
+            
+            // Handle custom session type
+            if (sessionTypeSelect.value === 'Other' && customTypeInput.value) {
+                // In a real app, you would handle this on the server side
+                // This is just to demonstrate the idea
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = 'custom_session_type';
+                hiddenInput.value = customTypeInput.value;
+                this.appendChild(hiddenInput);
+            }
+        });
+    });
+</script>
 {% endblock %}

@@ -1,61 +1,480 @@
-<!-- templates/performance/goal_list.html -->
 {% extends 'base.html' %}
 
-{% block title %}My Goals{% endblock %}
+{% block title %}My Goals - Athletic Coach{% endblock %}
+
+{% block extra_css %}
+<style>
+    .goal-card {
+        border-left: 5px solid;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .goal-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+    
+    .goal-pending { border-left-color: #f39c12; }
+    .goal-in-progress { border-left-color: #3498db; }
+    .goal-achieved { border-left-color: #2ecc71; }
+    .goal-abandoned { border-left-color: #95a5a6; }
+    
+    .goal-badge {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+    }
+    
+    .goal-progress {
+        height: 8px;
+        margin-bottom: 10px;
+    }
+    
+    .days-left {
+        font-size: 0.9rem;
+    }
+    
+    .days-left.urgent {
+        color: #e74c3c;
+        font-weight: bold;
+    }
+    
+    .goal-filters .btn {
+        margin-right: 5px;
+        margin-bottom: 5px;
+    }
+    
+    .goal-tags {
+        margin-top: 10px;
+    }
+    
+    .goal-tag {
+        display: inline-block;
+        background-color: #f8f9fa;
+        color: #495057;
+        font-size: 0.75rem;
+        padding: 2px 8px;
+        border-radius: 12px;
+        margin-right: 5px;
+        margin-bottom: 5px;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    My Goals
-                    <a href="{% url 'set_goal' %}" class="btn btn-primary btn-sm">Set New Goal</a>
-                </div>
-                <div class="card-body">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Goal Type</th>
-                                <th>Description</th>
-                                <th>Target Date</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for goal in goals %}
-                                <tr>
-                                    <td>{{ goal.goal_type }}</td>
-                                    <td>{{ goal.description }}</td>
-                                    <td>{{ goal.target_date }}</td>
-                                    <td>
-                                        {% if goal.status == 'pending' %}
-                                            <span class="badge bg-warning">Pending</span>
-                                        {% elif goal.status == 'in_progress' %}
-                                            <span class="badge bg-info">In Progress</span>
-                                        {% elif goal.status == 'achieved' %}
-                                            <span class="badge bg-success">Achieved</span>
-                                        {% else %}
-                                            <span class="badge bg-danger">Abandoned</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <a href="{% url 'goal_detail' goal.id %}" class="btn btn-sm btn-info">View</a>
-                                    </td>
-                                </tr>
-                            {% empty %}
-                                <tr>
-                                    <td colspan="5" class="text-center">
-                                        No goals set yet. <a href="{% url 'set_goal' %}">Set your first goal!</a>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h2 class="mb-0"><i class="fas fa-bullseye me-2"></i>My Goals</h2>
+        <p class="text-muted">Track your goals and monitor your progress.</p>
+    </div>
+    <div class="col-md-6 text-md-end">
+        <a href="{% url 'set_goal' %}" class="btn btn-success">
+            <i class="fas fa-plus me-1"></i> Set New Goal
+        </a>
+    </div>
+</div>
+
+<!-- Goal Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-light h-100">
+            <div class="card-body text-center">
+                <h1 class="display-4 mb-0" id="total-goals">{{ goals|length }}</h1>
+                <p class="lead">Total Goals</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white h-100">
+            <div class="card-body text-center">
+                <h1 class="display-4 mb-0" id="pending-goals">0</h1>
+                <p class="lead">Pending</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-primary text-white h-100">
+            <div class="card-body text-center">
+                <h1 class="display-4 mb-0" id="in-progress-goals">0</h1>
+                <p class="lead">In Progress</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white h-100">
+            <div class="card-body text-center">
+                <h1 class="display-4 mb-0" id="achieved-goals">0</h1>
+                <p class="lead">Achieved</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Goal Filters -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="mb-3"><i class="fas fa-filter me-2"></i>Filters</h5>
+                <div class="goal-filters">
+                    <div class="mb-3">
+                        <span class="me-2">Status:</span>
+                        <button class="btn btn-sm btn-light active filter-btn" data-filter="all">All</button>
+                        <button class="btn btn-sm btn-warning filter-btn" data-filter="pending">Pending</button>
+                        <button class="btn btn-sm btn-primary filter-btn" data-filter="in_progress">In Progress</button>
+                        <button class="btn btn-sm btn-success filter-btn" data-filter="achieved">Achieved</button>
+                        <button class="btn btn-sm btn-secondary filter-btn" data-filter="abandoned">Abandoned</button>
+                    </div>
+                    <div class="mb-3">
+                        <span class="me-2">Type:</span>
+                        <button class="btn btn-sm btn-light active filter-type-btn" data-filter-type="all">All Types</button>
+                        {% for type in goal_types %}
+                            <button class="btn btn-sm btn-light filter-type-btn" data-filter-type="{{ type }}">{{ type }}</button>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-0">
+                        <span class="me-2">Timeframe:</span>
+                        <button class="btn btn-sm btn-light active filter-time-btn" data-filter-time="all">All Time</button>
+                        <button class="btn btn-sm btn-light filter-time-btn" data-filter-time="week">This Week</button>
+                        <button class="btn btn-sm btn-light filter-time-btn" data-filter-time="month">This Month</button>
+                        <button class="btn btn-sm btn-light filter-time-btn" data-filter-time="quarter">This Quarter</button>
+                        <button class="btn btn-sm btn-light filter-time-btn" data-filter-time="overdue">Overdue</button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Goals List -->
+<div class="row" id="goals-container">
+    {% if goals %}
+        {% for goal in goals %}
+            <div class="col-md-6 mb-4 goal-item" 
+                data-status="{{ goal.status }}" 
+                data-type="{{ goal.goal_type }}" 
+                data-date="{{ goal.target_date|date:'Y-m-d' }}">
+                <div class="card goal-card h-100 goal-{{ goal.status }}">
+                    <div class="card-body">
+                        <span class="goal-badge badge {% if goal.status == 'pending' %}bg-warning{% elif goal.status == 'in_progress' %}bg-primary{% elif goal.status == 'achieved' %}bg-success{% else %}bg-secondary{% endif %}">
+                            {{ goal.get_status_display }}
+                        </span>
+                        <h5 class="card-title">{{ goal.goal_type }}</h5>
+                        
+                        {% if goal.status == 'pending' or goal.status == 'in_progress' %}
+                            <div class="progress goal-progress">
+                                <div class="progress-bar 
+                                    {% if goal.status == 'pending' %}bg-warning{% else %}bg-primary{% endif %}"
+                                    role="progressbar" 
+                                    style="width: {{ goal.progress|default:0 }}%;" 
+                                    aria-valuenow="{{ goal.progress|default:0 }}" 
+                                    aria-valuemin="0" 
+                                    aria-valuemax="100">
+                                </div>
+                            </div>
+                            
+                            {% if goal.days_left < 0 %}
+                                <p class="days-left urgent">
+                                    <i class="fas fa-exclamation-triangle me-1"></i> Overdue by <span class="days-overdue">{{ goal.days_left }}</span> days
+                                </p>
+                            {% elif goal.days_left <= 7 %}
+                                <p class="days-left urgent">
+                                    <i class="fas fa-clock me-1"></i> {{ goal.days_left }} days left
+                                </p>
+                            {% else %}
+                                <p class="days-left">
+                                    <i class="fas fa-calendar-alt me-1"></i> {{ goal.days_left }} days left
+                                </p>
+                            {% endif %}
+                        {% endif %}
+                        
+                        <p class="card-text">{{ goal.description|truncatechars:150 }}</p>
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-muted small">
+                                <i class="fas fa-calendar-day me-1"></i> Target: {{ goal.target_date|date:"M d, Y" }}
+                            </div>
+                            <a href="{% url 'goal_detail' goal.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye me-1"></i> Details
+                            </a>
+                        </div>
+                        
+                        <div class="goal-tags">
+                            <span class="goal-tag">{{ goal.goal_type }}</span>
+                            {% if goal.status == 'pending' or goal.status == 'in_progress' %}
+                                <span class="goal-tag">{{ goal.days_left }} days left</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="col-md-12">
+            <div class="text-center py-5">
+                <i class="fas fa-bullseye fa-3x mb-3 text-muted"></i>
+                <h5>No goals set yet</h5>
+                <p class="text-muted">Start tracking your progress by setting your first goal.</p>
+                <a href="{% url 'set_goal' %}" class="btn btn-primary mt-2">
+                    <i class="fas fa-plus me-1"></i> Set a Goal
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Calculate days left and progress for each goal
+        const goals = document.querySelectorAll('.goal-item');
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // Count goals by status for the statistics section
+        let pendingCount = 0;
+        let inProgressCount = 0;
+        let achievedCount = 0;
+        
+        goals.forEach(goal => {
+            const targetDate = new Date(goal.getAttribute('data-date'));
+            const status = goal.getAttribute('data-status');
+            
+            // Count goals by status
+            if (status === 'pending') {
+                pendingCount++;
+            } else if (status === 'in_progress') {
+                inProgressCount++;
+            } else if (status === 'achieved') {
+                achievedCount++;
+            }
+            
+            // Only calculate for pending and in_progress goals
+            if (status === 'pending' || status === 'in_progress') {
+                // Calculate days left
+                const timeDiff = targetDate - today;
+                const daysLeft = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+                
+                // Add days left to the goal's dataset for filtering
+                goal.setAttribute('data-days-left', daysLeft);
+                
+                // Fix for the abs filter - update days overdue text if needed
+                const daysOverdueEl = goal.querySelector('.days-overdue');
+                if (daysOverdueEl && daysLeft < 0) {
+                    daysOverdueEl.textContent = Math.abs(daysLeft);
+                }
+                
+                // Calculate progress based on time elapsed and time remaining
+                if (daysLeft > 0) {
+                    // Set a placeholder progress value - in a real app, this would come from the backend
+                    // or be calculated based on specific metrics for the goal
+                    let progress = 0;
+                    
+                    if (status === 'in_progress') {
+                        // Simulate progress based on time elapsed
+                        const creationDate = new Date(today);
+                        creationDate.setDate(today.getDate() - 30); // Assume goal was created 30 days ago
+                        
+                        const totalDays = (targetDate - creationDate) / (1000 * 60 * 60 * 24);
+                        const daysElapsed = 30;
+                        
+                        progress = Math.round((daysElapsed / totalDays) * 100);
+                        progress = Math.min(progress, 90); // Cap at 90% for in_progress
+                    }
+                    
+                    // Update progress bar
+                    const progressBar = goal.querySelector('.progress-bar');
+                    if (progressBar) {
+                        progressBar.style.width = `${progress}%`;
+                        progressBar.setAttribute('aria-valuenow', progress);
+                    }
+                }
+            }
+        });
+        
+        // Update the counters with calculated values
+        document.getElementById('pending-goals').textContent = pendingCount;
+        document.getElementById('in-progress-goals').textContent = inProgressCount;
+        document.getElementById('achieved-goals').textContent = achievedCount;
+        
+        // Filters functionality
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        const filterTypeButtons = document.querySelectorAll('.filter-type-btn');
+        const filterTimeButtons = document.querySelectorAll('.filter-time-btn');
+        
+        // Status filters
+        filterButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                // Update active button
+                filterButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                // Apply filters
+                applyFilters();
+            });
+        });
+        
+        // Type filters
+        filterTypeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                // Update active button
+                filterTypeButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                // Apply filters
+                applyFilters();
+            });
+        });
+        
+        // Time filters
+        filterTimeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                // Update active button
+                filterTimeButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                // Apply filters
+                applyFilters();
+            });
+        });
+        
+        function applyFilters() {
+            const statusFilter = document.querySelector('.filter-btn.active').getAttribute('data-filter');
+            const typeFilter = document.querySelector('.filter-type-btn.active').getAttribute('data-filter-type');
+            const timeFilter = document.querySelector('.filter-time-btn.active').getAttribute('data-filter-time');
+            
+            let goalCount = 0;
+            let pendingCount = 0;
+            let inProgressCount = 0;
+            let achievedCount = 0;
+            
+            goals.forEach(goal => {
+                const status = goal.getAttribute('data-status');
+                const type = goal.getAttribute('data-type');
+                const targetDate = new Date(goal.getAttribute('data-date'));
+                const daysLeft = parseInt(goal.getAttribute('data-days-left') || '0');
+                
+                // Determine if goal should be visible based on filters
+                let isVisible = true;
+                
+                // Apply status filter
+                if (statusFilter !== 'all' && status !== statusFilter) {
+                    isVisible = false;
+                }
+                
+                // Apply type filter
+                if (typeFilter !== 'all' && type !== typeFilter) {
+                    isVisible = false;
+                }
+                
+                // Apply time filter
+                if (timeFilter !== 'all') {
+                    const now = new Date();
+                    
+                    if (timeFilter === 'week') {
+                        // This week
+                        const weekEnd = new Date(now);
+                        weekEnd.setDate(now.getDate() + (7 - now.getDay()));
+                        
+                        if (targetDate > weekEnd) {
+                            isVisible = false;
+                        }
+                    } else if (timeFilter === 'month') {
+                        // This month
+                        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                        
+                        if (targetDate > monthEnd) {
+                            isVisible = false;
+                        }
+                    } else if (timeFilter === 'quarter') {
+                        // This quarter
+                        const quarterEnd = new Date(now);
+                        quarterEnd.setMonth(Math.floor(now.getMonth() / 3) * 3 + 3, 0);
+                        
+                        if (targetDate > quarterEnd) {
+                            isVisible = false;
+                        }
+                    } else if (timeFilter === 'overdue') {
+                        // Overdue goals
+                        if (daysLeft >= 0 || status === 'achieved' || status === 'abandoned') {
+                            isVisible = false;
+                        }
+                    }
+                }
+                
+                // Show or hide the goal
+                goal.style.display = isVisible ? '' : 'none';
+                
+                // Update counters if visible
+                if (isVisible) {
+                    goalCount++;
+                    
+                    if (status === 'pending') {
+                        pendingCount++;
+                    } else if (status === 'in_progress') {
+                        inProgressCount++;
+                    } else if (status === 'achieved') {
+                        achievedCount++;
+                    }
+                }
+            });
+            
+            // Update counter displays
+            document.getElementById('total-goals').textContent = goalCount;
+            document.getElementById('pending-goals').textContent = pendingCount;
+            document.getElementById('in-progress-goals').textContent = inProgressCount;
+            document.getElementById('achieved-goals').textContent = achievedCount;
+            
+            // Show message if no goals match filters
+            const noGoalsMessage = document.querySelector('.col-md-12 .text-center');
+            const noMatchingGoals = document.getElementById('no-matching-goals');
+            
+            if (goalCount === 0 && goals.length > 0) {
+                // No goals match the filters
+                if (!noMatchingGoals) {
+                    const message = document.createElement('div');
+                    message.id = 'no-matching-goals';
+                    message.className = 'col-md-12';
+                    message.innerHTML = `
+                        <div class="text-center py-5">
+                            <i class="fas fa-filter fa-3x mb-3 text-muted"></i>
+                            <h5>No goals match your filters</h5>
+                            <p class="text-muted">Try adjusting your filter criteria.</p>
+                            <button class="btn btn-primary mt-2 reset-filters">
+                                <i class="fas fa-undo me-1"></i> Reset Filters
+                            </button>
+                        </div>
+                    `;
+                    document.getElementById('goals-container').appendChild(message);
+                    
+                    // Add reset filters functionality
+                    document.querySelector('.reset-filters').addEventListener('click', resetFilters);
+                }
+            } else {
+                // Remove no matching goals message if it exists
+                if (noMatchingGoals) {
+                    noMatchingGoals.remove();
+                }
+            }
+        }
+        
+        function resetFilters() {
+            // Reset status filter
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            document.querySelector('[data-filter="all"]').classList.add('active');
+            
+            // Reset type filter
+            filterTypeButtons.forEach(btn => btn.classList.remove('active'));
+            document.querySelector('[data-filter-type="all"]').classList.add('active');
+            
+            // Reset time filter
+            filterTimeButtons.forEach(btn => btn.classList.remove('active'));
+            document.querySelector('[data-filter-time="all"]').classList.add('active');
+            
+            // Apply reset filters
+            applyFilters();
+        }
+    });
+</script>
 {% endblock %}

@@ -1,29 +1,652 @@
-<!-- templates/training/session_detail.html -->
 {% extends 'base.html' %}
 
-{% block title %}Training Session Details{% endblock %}
+{% block title %}Session Details - Athletic Coach{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-badge {
+        font-size: 0.9rem;
+        padding: 5px 10px;
+    }
+    
+    .countdown-box {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    
+    .countdown-time {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #3498db;
+    }
+    
+    .countdown-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    
+    .session-timeline {
+        position: relative;
+        padding-left: 30px;
+        margin-bottom: 20px;
+    }
+    
+    .session-timeline:before {
+        content: '';
+        position: absolute;
+        left: 4px;
+        top: 5px;
+        height: calc(100% - 10px);
+        width: 2px;
+        background-color: #e9ecef;
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 15px;
+    }
+    
+    .timeline-marker {
+        position: absolute;
+        left: -30px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: #3498db;
+        top: 5px;
+    }
+    
+    .timeline-item.current .timeline-marker {
+        background-color: #e74c3c;
+        width: 12px;
+        height: 12px;
+        left: -31px;
+        top: 4px;
+    }
+    
+    .timeline-item.completed .timeline-marker {
+        background-color: #2ecc71;
+    }
+    
+    .timeline-content {
+        padding-bottom: 10px;
+    }
+    
+    .exercise-table th,
+    .exercise-table td {
+        vertical-align: middle;
+    }
+    
+    .note-card {
+        border-left: 3px solid #3498db;
+    }
+    
+    .feedback-card {
+        border-left: 3px solid #2ecc71;
+    }
+    
+    .share-button {
+        cursor: pointer;
+    }
+    
+    .feedback-form-toggle {
+        cursor: pointer;
+    }
+    
+    .print-btn {
+        color: #6c757d;
+    }
+    
+    .print-btn:hover {
+        color: #343a40;
+    }
+    
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+        
+        .print-only {
+            display: block !important;
+        }
+        
+        .card {
+            border: none !important;
+            box-shadow: none !important;
+        }
+        
+        .card-header {
+            background-color: white !important;
+            color: black !important;
+        }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header">Training Session Details</div>
-    <div class="card-body">
-        <div class="row">
-            <div class="col-md-6">
-                <h5>Session Information</h5>
-                <p><strong>Athlete:</strong> {{ session.athlete.full_name }}</p>
-                <p><strong>Coach:</strong> {{ session.coach.full_name }}</p>
-                <p><strong>Date:</strong> {{ session.session_date }}</p>
-                <p><strong>Type:</strong> {{ session.session_type }}</p>
-                <p><strong>Status:</strong> {{ session.get_status_display }}</p>
+<div class="print-only d-none mb-4">
+    <h2 class="text-center">Training Session Details</h2>
+    <p class="text-center text-muted">Generated from Athletic Coach</p>
+</div>
+
+<div class="row mb-4 no-print">
+    <div class="col-md-6">
+        <a href="{% url 'training_session_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to Sessions
+        </a>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="#" class="btn btn-outline-secondary print-btn" onclick="window.print(); return false;">
+            <i class="fas fa-print me-1"></i> Print
+        </a>
+    </div>
+</div>
+
+<!-- Session Details -->
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="fas fa-dumbbell me-2"></i>Session Details</h4>
+                <span class="status-badge badge {% if session.status == 'planned' %}bg-warning{% elif session.status == 'ongoing' %}bg-primary{% else %}bg-success{% endif %}">
+                    {{ session.get_status_display }}
+                </span>
             </div>
-            <div class="col-md-6">
-                <h5>Description</h5>
-                <p>{{ session.description }}</p>
+            <div class="card-body">
+                <h5 class="card-title">{{ session.session_type }}</h5>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <p><i class="far fa-calendar-alt me-1"></i> <strong>Date:</strong> {{ session.session_date|date:"l, F j, Y" }}</p>
+                        <p><i class="far fa-clock me-1"></i> <strong>Time:</strong> {{ session.session_date|date:"g:i A" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p>
+                            {% if user.role == 'athlete' %}
+                                <i class="fas fa-user-tie me-1"></i> <strong>Coach:</strong> {{ session.coach.full_name }}
+                            {% else %}
+                                <i class="fas fa-user-alt me-1"></i> <strong>Athlete:</strong> {{ session.athlete.full_name }}
+                            {% endif %}
+                        </p>
+                        <p><i class="fas fa-info-circle me-1"></i> <strong>Status:</strong> {{ session.get_status_display }}</p>
+                    </div>
+                </div>
+                
+                <!-- Session Description -->
+                <div class="mb-4">
+                    <h6><i class="fas fa-clipboard me-2"></i>Session Plan</h6>
+                    <div class="p-3 bg-light rounded">
+                        {{ session.description|linebreaks }}
+                    </div>
+                </div>
+                
+                <!-- Exercises Table (example structure) -->
+                {% if exercises %}
+                    <div class="mb-4">
+                        <h6><i class="fas fa-list-ol me-2"></i>Exercises</h6>
+                        <div class="table-responsive">
+                            <table class="table table-hover exercise-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Exercise</th>
+                                        <th>Sets</th>
+                                        <th>Reps/Duration</th>
+                                        <th>Rest</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for exercise in exercises %}
+                                        <tr>
+                                            <td>{{ forloop.counter }}</td>
+                                            <td>{{ exercise.name }}</td>
+                                            <td>{{ exercise.sets }}</td>
+                                            <td>{{ exercise.reps_duration }}</td>
+                                            <td>{{ exercise.rest }}</td>
+                                            <td>{{ exercise.notes }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                <!-- Coach Notes -->
+                {% if coach_notes %}
+                    <div class="mb-4">
+                        <h6><i class="fas fa-sticky-note me-2"></i>Coach Notes</h6>
+                        <div class="card note-card">
+                            <div class="card-body">
+                                {{ coach_notes|linebreaks }}
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                <!-- Session Feedback (shown if completed) -->
+                {% if session.status == 'completed' and feedback %}
+                    <div class="mb-4">
+                        <h6><i class="fas fa-comment-alt me-2"></i>Session Feedback</h6>
+                        <div class="card feedback-card">
+                            <div class="card-body">
+                                <p><strong>Rating:</strong> 
+                                    <span class="text-warning">
+                                        {% for i in '12345'|make_list %}
+                                            {% if forloop.counter <= feedback.rating %}
+                                                <i class="fas fa-star"></i>
+                                            {% else %}
+                                                <i class="far fa-star"></i>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </span>
+                                </p>
+                                <p><strong>Comments:</strong></p>
+                                <p>{{ feedback.comments }}</p>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Status Update Panel for Coaches -->
+        {% if user.role == 'coach' and session.status != 'completed' %}
+            <div class="card mb-4 no-print">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Update Session Status</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="#" id="update-status-form">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="planned" {% if session.status == 'planned' %}selected{% endif %}>Planned</option>
+                                <option value="ongoing" {% if session.status == 'ongoing' %}selected{% endif %}>Ongoing</option>
+                                <option value="completed" {% if session.status == 'completed' %}selected{% endif %}>Completed</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="coach_notes" class="form-label">Coach Notes</label>
+                            <textarea class="form-control" id="coach_notes" name="coach_notes" rows="3">{{ coach_notes }}</textarea>
+                            <div class="form-text">Add notes about the session, athlete performance, or recommendations.</div>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i> Update Session
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        {% endif %}
+        
+        <!-- Feedback Form for Athletes -->
+        {% if user.role == 'athlete' and session.status == 'completed' and not feedback %}
+            <div class="card mb-4 no-print">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-comment me-2"></i>Session Feedback</h5>
+                </div>
+                <div class="card-body">
+                    <p>Please rate this training session and provide feedback to your coach.</p>
+                    
+                    <form method="POST" action="#" id="feedback-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_type" value="feedback">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Rating</label>
+                            <div class="rating-input">
+                                <div class="rating-stars fs-3">
+                                    <i class="far fa-star rating-star" data-value="1"></i>
+                                    <i class="far fa-star rating-star" data-value="2"></i>
+                                    <i class="far fa-star rating-star" data-value="3"></i>
+                                    <i class="far fa-star rating-star" data-value="4"></i>
+                                    <i class="far fa-star rating-star" data-value="5"></i>
+                                </div>
+                                <input type="hidden" name="rating" id="rating-value" value="0">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="comments" class="form-label">Comments</label>
+                            <textarea class="form-control" id="comments" name="comments" rows="3" placeholder="Share your thoughts about the session..."></textarea>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane me-1"></i> Submit Feedback
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Session Countdown/Timer -->
+        {% if session.status == 'planned' %}
+            <div class="card mb-4 no-print">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-hourglass-half me-2"></i>Session Countdown</h5>
+                </div>
+                <div class="card-body">
+                    <div class="countdown-box">
+                        <div class="countdown-time" id="countdown-timer">--:--:--</div>
+                        <div class="countdown-label">until session starts</div>
+                    </div>
+                    
+                    {% if user.role == 'athlete' %}
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-outline-primary" id="add-to-calendar">
+                                <i class="fas fa-calendar-plus me-1"></i> Add to Calendar
+                            </button>
+                            <a href="#" class="btn btn-outline-secondary share-button">
+                                <i class="fas fa-share-alt me-1"></i> Share Session
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+        
+        <!-- Progress Timeline -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Session Timeline</h5>
+            </div>
+            <div class="card-body">
+                <div class="session-timeline">
+                    <div class="timeline-item {% if session.status == 'planned' %}current{% else %}completed{% endif %}">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-0">Session Created</h6>
+                            <p class="text-muted small">{{ session.created_date|date:"M d, Y" }}</p>
+                            <p>Training session has been planned.</p>
+                        </div>
+                    </div>
+                    
+                    {% if session.status == 'ongoing' or session.status == 'completed' %}
+                        <div class="timeline-item {% if session.status == 'ongoing' %}current{% else %}completed{% endif %}">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-0">Session Started</h6>
+                                <p class="text-muted small">{{ session.start_date|date:"M d, Y H:i" }}</p>
+                                <p>Training session is in progress.</p>
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    {% if session.status == 'completed' %}
+                        <div class="timeline-item current">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-0">Session Completed</h6>
+                                <p class="text-muted small">{{ session.completion_date|date:"M d, Y H:i" }}</p>
+                                <p>Training session has been completed successfully.</p>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Athlete/Coach Information -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    {% if user.role == 'athlete' %}
+                        <i class="fas fa-user-tie me-2"></i>Coach Information
+                    {% else %}
+                        <i class="fas fa-user-alt me-2"></i>Athlete Information
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if user.role == 'athlete' %}
+                    <div class="text-center mb-3">
+                        <div class="avatar-placeholder mb-3 mx-auto">
+                            <i class="fas fa-user-tie fa-4x text-primary"></i>
+                        </div>
+                        <h5>{{ session.coach.full_name }}</h5>
+                        <p class="text-muted">Coach</p>
+                    </div>
+                    
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Specialization:</span>
+                            <span>{{ session.coach.specialization }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Email:</span>
+                            <span>{{ session.coach.user.email }}</span>
+                        </li>
+                    </ul>
+                {% else %}
+                    <div class="text-center mb-3">
+                        <div class="avatar-placeholder mb-3 mx-auto">
+                            <i class="fas fa-user-alt fa-4x text-primary"></i>
+                        </div>
+                        <h5>{{ session.athlete.full_name }}</h5>
+                        <p class="text-muted">Athlete</p>
+                    </div>
+                    
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Sport:</span>
+                            <span>{{ session.athlete.sport }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Email:</span>
+                            <span>{{ session.athlete.user.email }}</span>
+                        </li>
+                    </ul>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Related Sessions -->
+        <div class="card mb-4 no-print">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-link me-2"></i>Related Sessions</h5>
+            </div>
+            <div class="card-body">
+                {% if related_sessions %}
+                    <ul class="list-group list-group-flush">
+                        {% for related in related_sessions %}
+                            <li class="list-group-item">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <strong>{{ related.session_type }}</strong>
+                                        <div class="text-muted small">{{ related.session_date|date:"M d, Y" }}</div>
+                                    </div>
+                                    <span class="badge {% if related.status == 'planned' %}bg-warning{% elif related.status == 'ongoing' %}bg-primary{% else %}bg-success{% endif %}">
+                                        {{ related.get_status_display }}
+                                    </span>
+                                </div>
+                                <div class="mt-2">
+                                    <a href="{% url 'training_session_detail' related.id %}" class="btn btn-sm btn-outline-primary">View</a>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted mb-0">No related sessions found.</p>
+                {% endif %}
             </div>
         </div>
     </div>
-    <div class="card-footer">
-        <a href="{% url 'training_session_list' %}" class="btn btn-secondary">Back to Sessions</a>
-    </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Session countdown timer
+        const countdownTimer = document.getElementById('countdown-timer');
+        
+        if (countdownTimer) {
+            // Get session date and time
+            const sessionDate = new Date('{{ session.session_date|date:"Y-m-d H:i:s" }}');
+            
+            // Update countdown every second
+            function updateCountdown() {
+                const now = new Date();
+                const diff = sessionDate - now;
+                
+                // If session date is in the past, show "Session Started"
+                if (diff <= 0) {
+                    countdownTimer.textContent = "Session Started";
+                    countdownTimer.style.color = "#e74c3c";
+                    return;
+                }
+                
+                // Calculate days, hours, minutes, seconds
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                
+                // Format and display countdown
+                if (days > 0) {
+                    countdownTimer.textContent = `${days}d ${hours}h ${minutes}m`;
+                } else {
+                    countdownTimer.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                }
+            }
+            
+            // Update immediately and then every second
+            updateCountdown();
+            setInterval(updateCountdown, 1000);
+            
+            // Add to calendar functionality
+            const addToCalendarBtn = document.getElementById('add-to-calendar');
+            
+            if (addToCalendarBtn) {
+                addToCalendarBtn.addEventListener('click', function() {
+                    const sessionTitle = '{{ session.session_type }}';
+                    const sessionDescription = '{{ session.description|escapejs }}';
+                    const sessionStart = sessionDate.toISOString();
+                    const sessionEnd = new Date(sessionDate.getTime() + 60 * 60 * 1000).toISOString(); // Assuming 1 hour duration
+                    
+                    // Create Google Calendar URL
+                    const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(sessionTitle)}&dates=${sessionStart.replace(/[-:]/g, '').replace(/\.\d+/g, '')}/${sessionEnd.replace(/[-:]/g, '').replace(/\.\d+/g, '')}&details=${encodeURIComponent(sessionDescription)}`;
+                    
+                    // Open Google Calendar in a new tab
+                    window.open(googleCalendarUrl, '_blank');
+                });
+            }
+        }
+        
+        // Star rating system for feedback
+        const ratingStars = document.querySelectorAll('.rating-star');
+        const ratingValue = document.getElementById('rating-value');
+        
+        if (ratingStars.length > 0) {
+            ratingStars.forEach(star => {
+                // Hover effect
+                star.addEventListener('mouseover', function() {
+                    const value = parseInt(this.getAttribute('data-value'));
+                    
+                    // Fill in stars up to the hovered one
+                    ratingStars.forEach(s => {
+                        const starValue = parseInt(s.getAttribute('data-value'));
+                        
+                        if (starValue <= value) {
+                            s.classList.remove('far');
+                            s.classList.add('fas');
+                        } else {
+                            s.classList.remove('fas');
+                            s.classList.add('far');
+                        }
+                    });
+                });
+                
+                // Click to set rating
+                star.addEventListener('click', function() {
+                    const value = parseInt(this.getAttribute('data-value'));
+                    ratingValue.value = value;
+                    
+                    // Set the stars permanently
+                    ratingStars.forEach(s => {
+                        const starValue = parseInt(s.getAttribute('data-value'));
+                        
+                        if (starValue <= value) {
+                            s.classList.remove('far');
+                            s.classList.add('fas');
+                        } else {
+                            s.classList.remove('fas');
+                            s.classList.add('far');
+                        }
+                    });
+                });
+            });
+            
+            // Reset stars when mouse leaves the container
+            document.querySelector('.rating-stars').addEventListener('mouseleave', function() {
+                const currentRating = parseInt(ratingValue.value);
+                
+                ratingStars.forEach(s => {
+                    const starValue = parseInt(s.getAttribute('data-value'));
+                    
+                    if (starValue <= currentRating) {
+                        s.classList.remove('far');
+                        s.classList.add('fas');
+                    } else {
+                        s.classList.remove('fas');
+                        s.classList.add('far');
+                    }
+                });
+            });
+        }
+        
+        // Share button functionality
+        const shareButton = document.querySelector('.share-button');
+        
+        if (shareButton && navigator.share) {
+            shareButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const sessionTitle = '{{ session.session_type }}';
+                const sessionDate = '{{ session.session_date|date:"F j, Y g:i A" }}';
+                
+                navigator.share({
+                    title: 'Athletic Coach Training Session',
+                    text: `I have a ${sessionTitle} training session on ${sessionDate}`,
+                    url: window.location.href
+                })
+                .catch(error => console.log('Error sharing:', error));
+            });
+        } else if (shareButton) {
+            // Fallback if Web Share API is not available
+            shareButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Copy URL to clipboard
+                const dummy = document.createElement('input');
+                document.body.appendChild(dummy);
+                dummy.value = window.location.href;
+                dummy.select();
+                document.execCommand('copy');
+                document.body.removeChild(dummy);
+                
+                // Change button text temporarily
+                const originalText = this.innerHTML;
+                this.innerHTML = '<i class="fas fa-check me-1"></i> URL Copied!';
+                
+                setTimeout(() => {
+                    this.innerHTML = originalText;
+                }, 2000);
+            });
+        }
+    });
+</script>
 {% endblock %}

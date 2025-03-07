@@ -1,52 +1,588 @@
-<!-- templates/performance/goal_detail.html -->
 {% extends 'base.html' %}
 
-{% block title %}Goal Details{% endblock %}
+{% block title %}Goal Detail - Athletic Coach{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-badge {
+        font-size: 0.9rem;
+        padding: 5px 10px;
+    }
+    
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+        margin-bottom: 20px;
+    }
+    
+    .timeline:before {
+        content: '';
+        position: absolute;
+        left: 4px;
+        top: 5px;
+        height: calc(100% - 10px);
+        width: 2px;
+        background-color: #e9ecef;
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 15px;
+    }
+    
+    .timeline-marker {
+        position: absolute;
+        left: -30px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: #3498db;
+        top: 5px;
+    }
+    
+    .timeline-item.current .timeline-marker {
+        background-color: #e74c3c;
+        width: 12px;
+        height: 12px;
+        left: -31px;
+        top: 4px;
+    }
+    
+    .timeline-content {
+        padding-bottom: 10px;
+    }
+    
+    .milestone-list {
+        list-style-type: none;
+        padding-left: 0;
+    }
+    
+    .milestone-list li {
+        padding: 10px 15px;
+        border-left: 3px solid #3498db;
+        background-color: #f8f9fa;
+        margin-bottom: 10px;
+        border-radius: 0 5px 5px 0;
+    }
+    
+    .milestone-list li.completed {
+        border-left-color: #2ecc71;
+    }
+    
+    .milestone-list li.pending {
+        border-left-color: #f39c12;
+    }
+    
+    .calendar-view {
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        padding: 15px;
+    }
+    
+    .calendar-header {
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 10px;
+    }
+    
+    .calendar-body {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 5px;
+    }
+    
+    .calendar-day {
+        aspect-ratio: 1/1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 5px;
+        font-size: 0.8rem;
+    }
+    
+    .day-header {
+        font-weight: bold;
+        text-align: center;
+    }
+    
+    .current-day {
+        background-color: #3498db;
+        color: white;
+    }
+    
+    .target-day {
+        background-color: #e74c3c;
+        color: white;
+    }
+    
+    .progress-container {
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .progress-custom {
+        height: 10px;
+        border-radius: 5px;
+        margin-bottom: 10px;
+    }
+    
+    .status-update-form {
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        padding: 15px;
+        margin-top: 20px;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">Goal Details</div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <strong>Goal Type:</strong>
-                        <p>{{ goal.goal_type }}</p>
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <a href="{% url 'goal_list' %}" class="btn btn-outline-secondary mb-3">
+            <i class="fas fa-arrow-left me-1"></i> Back to Goals
+        </a>
+        
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="fas fa-bullseye me-2"></i>Goal Details</h4>
+                <span class="status-badge badge {% if goal.status == 'pending' %}bg-warning{% elif goal.status == 'in_progress' %}bg-primary{% elif goal.status == 'achieved' %}bg-success{% else %}bg-secondary{% endif %}">
+                    {{ goal.get_status_display }}
+                </span>
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">{{ goal.goal_type }}</h5>
+                <p class="card-text">{{ goal.description }}</p>
+                
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-calendar-alt me-1"></i> Target Date</h6>
+                        <p>{{ goal.target_date|date:"F d, Y" }}</p>
+                        
+                        <h6><i class="fas fa-clock me-1"></i> Created</h6>
+                        <p>{{ goal.created_date|date:"F d, Y" }}</p>
                     </div>
-                    
-                    <div class="mb-3">
-                        <strong>Description:</strong>
-                        <p>{{ goal.description }}</p>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <strong>Target Date:</strong>
-                        <p>{{ goal.target_date }}</p>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <strong>Status:</strong>
-                        {% if goal.status == 'pending' %}
-                            <span class="badge bg-warning">Pending</span>
-                        {% elif goal.status == 'in_progress' %}
-                            <span class="badge bg-info">In Progress</span>
-                        {% elif goal.status == 'achieved' %}
-                            <span class="badge bg-success">Achieved</span>
-                        {% else %}
-                            <span class="badge bg-danger">Abandoned</span>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="mt-3">
-                        <a href="{% url 'goal_list' %}" class="btn btn-secondary">Back to Goals</a>
-                        {% if goal.status != 'achieved' and goal.status != 'abandoned' %}
-                            <a href="{% url 'update_goal_status' goal.id %}" class="btn btn-primary">Update Status</a>
-                        {% endif %}
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-chart-line me-1"></i> Current Status</h6>
+                        <p>{{ goal.get_status_display }}</p>
+                        
+                        <h6><i class="fas fa-calendar-check me-1"></i> Last Updated</h6>
+                        <p>{{ goal.last_updated|date:"F d, Y" }}</p>
                     </div>
                 </div>
+                
+                {% if goal.status == 'pending' or goal.status == 'in_progress' %}
+                    <div class="progress-container mt-3">
+                        <h6 class="mb-3"><i class="fas fa-tasks me-1"></i> Progress Tracking</h6>
+                        
+                        <div class="progress progress-custom">
+                            <div class="progress-bar {% if goal.status == 'pending' %}bg-warning{% else %}bg-primary{% endif %}"
+                                role="progressbar" 
+                                style="width: {{ goal.progress|default:0 }}%;" 
+                                aria-valuenow="{{ goal.progress|default:0 }}" 
+                                aria-valuemin="0" 
+                                aria-valuemax="100">
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <span class="small">{{ goal.progress|default:0 }}% complete</span>
+                            
+                            {% if goal.days_left < 0 %}
+                                <span class="small text-danger">
+                                    <i class="fas fa-exclamation-triangle me-1"></i> Overdue by <span class="days-overdue">{{ goal.days_left }}</span> days
+                                </span>
+                            {% elif goal.days_left <= 7 %}
+                                <span class="small text-danger">
+                                    <i class="fas fa-clock me-1"></i> {{ goal.days_left }} days left
+                                </span>
+                            {% else %}
+                                <span class="small text-muted">
+                                    <i class="fas fa-calendar-alt me-1"></i> {{ goal.days_left }} days left
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- Milestones -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-flag-checkered me-2"></i>Milestones</h5>
+            </div>
+            <div class="card-body">
+                <ul class="milestone-list">
+                    {% for milestone in milestones %}
+                        <li class="{{ milestone.status }}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>{{ milestone.description }}</span>
+                                <div>
+                                    <span class="badge {% if milestone.status == 'completed' %}bg-success{% else %}bg-warning{% endif %}">
+                                        {{ milestone.status|title }}
+                                    </span>
+                                    <span class="ms-2 text-muted small">{{ milestone.date|date:"M d, Y" }}</span>
+                                </div>
+                            </div>
+                        </li>
+                    {% empty %}
+                        <div class="text-center py-3">
+                            <p class="text-muted mb-0">No milestones added yet.</p>
+                        </div>
+                    {% endfor %}
+                </ul>
+                
+                <button type="button" class="btn btn-outline-primary mt-3" data-bs-toggle="modal" data-bs-target="#addMilestoneModal">
+                    <i class="fas fa-plus me-1"></i> Add Milestone
+                </button>
+            </div>
+        </div>
+        
+        <!-- Timeline -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Timeline</h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-0">Goal Created</h6>
+                            <p class="text-muted small">{{ goal.created_date|date:"F d, Y" }}</p>
+                        </div>
+                    </div>
+                    
+                    {% for event in timeline_events %}
+                        <div class="timeline-item {% if forloop.last %}current{% endif %}">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-0">{{ event.title }}</h6>
+                                <p class="text-muted small">{{ event.date|date:"F d, Y" }}</p>
+                                <p>{{ event.description }}</p>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    
+                    {% if goal.status == 'achieved' %}
+                        <div class="timeline-item current">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-0">Goal Achieved</h6>
+                                <p class="text-muted small">{{ goal.last_updated|date:"F d, Y" }}</p>
+                                <p>Congratulations! You've successfully achieved this goal.</p>
+                            </div>
+                        </div>
+                    {% elif goal.status == 'abandoned' %}
+                        <div class="timeline-item current">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-0">Goal Abandoned</h6>
+                                <p class="text-muted small">{{ goal.last_updated|date:"F d, Y" }}</p>
+                                <p>This goal has been marked as abandoned.</p>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="timeline-item current">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-0">Current Status: {{ goal.get_status_display }}</h6>
+                                <p class="text-muted small">{{ goal.last_updated|date:"F d, Y" }}</p>
+                                <p>Working towards completion.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-0">Target Completion</h6>
+                                <p class="text-muted small">{{ goal.target_date|date:"F d, Y" }}</p>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Target Calendar -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-calendar me-2"></i>Calendar View</h5>
+            </div>
+            <div class="card-body">
+                <div class="calendar-view">
+                    <div class="calendar-header" id="calendar-month-year"></div>
+                    <div class="calendar-body" id="calendar-days">
+                        <!-- Calendar days will be generated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Update Status -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Update Status</h5>
+            </div>
+            <div class="card-body">
+                <form action="{% url 'update_goal_status' goal.id %}" method="POST" class="status-update-form">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="id_status" class="form-label">Status</label>
+                        <select name="status" id="id_status" class="form-select">
+                            <option value="pending" {% if goal.status == 'pending' %}selected{% endif %}>Pending</option>
+                            <option value="in_progress" {% if goal.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                            <option value="achieved" {% if goal.status == 'achieved' %}selected{% endif %}>Achieved</option>
+                            <option value="abandoned" {% if goal.status == 'abandoned' %}selected{% endif %}>Abandoned</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_progress" class="form-label">Progress (0-100%)</label>
+                        <input type="range" class="form-range" min="0" max="100" step="5" id="id_progress" name="progress" value="{{ goal.progress|default:0 }}">
+                        <div class="d-flex justify-content-between">
+                            <span id="progress-value">{{ goal.progress|default:0 }}%</span>
+                            <span class="text-muted small">Drag to update</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_notes" class="form-label">Update Notes</label>
+                        <textarea id="id_notes" name="notes" class="form-control" rows="3" placeholder="Add notes about your progress..."></textarea>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i> Update Goal
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Related Performance -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-link me-2"></i>Related Performance</h5>
+            </div>
+            <div class="card-body">
+                {% if related_logs %}
+                    <ul class="list-group list-group-flush">
+                        {% for log in related_logs %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ log.activity_type }}</strong>
+                                    <div class="text-muted small">{{ log.log_date|date:"M d, Y" }}</div>
+                                </div>
+                                <span class="badge bg-primary rounded-pill">
+                                    {{ log.duration }} min
+                                </span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted mb-0">No related performance logs found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Milestone Modal -->
+<div class="modal fade" id="addMilestoneModal" tabindex="-1" aria-labelledby="addMilestoneModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addMilestoneModalLabel">Add New Milestone</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="milestoneForm">
+                    <div class="mb-3">
+                        <label for="milestone-description" class="form-label">Description</label>
+                        <input type="text" class="form-control" id="milestone-description" placeholder="Describe this milestone">
+                    </div>
+                    <div class="mb-3">
+                        <label for="milestone-date" class="form-label">Target Date</label>
+                        <input type="date" class="form-control" id="milestone-date">
+                    </div>
+                    <div class="mb-3">
+                        <label for="milestone-status" class="form-label">Status</label>
+                        <select class="form-select" id="milestone-status">
+                            <option value="pending">Pending</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveMilestone">Add Milestone</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Progress slider value display
+        const progressSlider = document.getElementById('id_progress');
+        const progressValue = document.getElementById('progress-value');
+        
+        progressSlider.addEventListener('input', function() {
+            progressValue.textContent = this.value + '%';
+        });
+        
+        // Status select changes progress max value
+        const statusSelect = document.getElementById('id_status');
+        
+        statusSelect.addEventListener('change', function() {
+            if (this.value === 'achieved') {
+                progressSlider.value = 100;
+                progressValue.textContent = '100%';
+            } else if (this.value === 'pending' && parseInt(progressSlider.value) > 0) {
+                progressSlider.value = 0;
+                progressValue.textContent = '0%';
+            } else if (this.value === 'abandoned') {
+                progressSlider.disabled = true;
+            } else {
+                progressSlider.disabled = false;
+            }
+        });
+        
+        // Fix for the abs filter - update days overdue text if needed
+        const daysOverdueEl = document.querySelector('.days-overdue');
+        if (daysOverdueEl) {
+            const daysLeft = parseInt(daysOverdueEl.textContent);
+            if (daysLeft < 0) {
+                daysOverdueEl.textContent = Math.abs(daysLeft);
+            }
+        }
+        
+        // Calendar view
+        const targetDate = new Date('{{ goal.target_date|date:"Y-m-d" }}');
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // Set calendar to month of target date
+        const calendarMonthYear = document.getElementById('calendar-month-year');
+        const calendarDays = document.getElementById('calendar-days');
+        
+        function generateCalendar(date) {
+            // Set month and year in header
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                               'July', 'August', 'September', 'October', 'November', 'December'];
+            calendarMonthYear.textContent = `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+            
+            // Clear previous calendar
+            calendarDays.innerHTML = '';
+            
+            // Add day headers (S M T W T F S)
+            const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+            dayNames.forEach(day => {
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'calendar-day day-header';
+                dayHeader.textContent = day;
+                calendarDays.appendChild(dayHeader);
+            });
+            
+            // Get first day of month and number of days
+            const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+            const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+            
+            // Add empty cells for days before first day of month
+            for (let i = 0; i < firstDay.getDay(); i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'calendar-day';
+                calendarDays.appendChild(emptyDay);
+            }
+            
+            // Add days of month
+            for (let i = 1; i <= lastDay.getDate(); i++) {
+                const day = document.createElement('div');
+                day.className = 'calendar-day';
+                day.textContent = i;
+                
+                // Highlight current day
+                const currentDate = new Date(date.getFullYear(), date.getMonth(), i);
+                
+                if (currentDate.toDateString() === today.toDateString()) {
+                    day.classList.add('current-day');
+                }
+                
+                // Highlight target day
+                if (currentDate.toDateString() === targetDate.toDateString()) {
+                    day.classList.add('target-day');
+                }
+                
+                calendarDays.appendChild(day);
+            }
+        }
+        
+        // Generate calendar for target date month
+        generateCalendar(targetDate);
+        
+        // Add milestone functionality
+        const saveMilestoneBtn = document.getElementById('saveMilestone');
+        const milestoneList = document.querySelector('.milestone-list');
+        
+        saveMilestoneBtn.addEventListener('click', function() {
+            const description = document.getElementById('milestone-description').value;
+            const date = document.getElementById('milestone-date').value;
+            const status = document.getElementById('milestone-status').value;
+            
+            if (!description || !date) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            // Format date
+            const formatDate = new Date(date).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+            
+            // Create new milestone item
+            const milestoneItem = document.createElement('li');
+            milestoneItem.className = status;
+            milestoneItem.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>${description}</span>
+                    <div>
+                        <span class="badge ${status === 'completed' ? 'bg-success' : 'bg-warning'}">
+                            ${status === 'completed' ? 'Completed' : 'Pending'}
+                        </span>
+                        <span class="ms-2 text-muted small">${formatDate}</span>
+                    </div>
+                </div>
+            `;
+            
+            // If no milestones exist, remove the empty message
+            if (milestoneList.querySelector('p.text-muted')) {
+                milestoneList.innerHTML = '';
+            }
+            
+            // Add to list
+            milestoneList.appendChild(milestoneItem);
+            
+            // Close modal and reset form
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addMilestoneModal'));
+            modal.hide();
+            
+            document.getElementById('milestoneForm').reset();
+        });
+    });
+</script>
 {% endblock %}

@@ -1,32 +1,81 @@
 {% extends 'base.html' %}
 
-{% block title %}Log Performance{% endblock %}
+{% block title %}Log Performance - Athletic Coach{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8">
         <div class="card">
-            <div class="card-header">Log Performance</div>
+            <div class="card-header">
+                <h4 class="mb-0"><i class="fas fa-chart-line me-2"></i>Log Performance</h4>
+            </div>
             <div class="card-body">
-                <form method="post">
+                <form method="POST" novalidate>
                     {% csrf_token %}
-                    {% for field in form %}
-                        <div class="mb-3">
-                            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                            {{ field }}
-                            {% if field.errors %}
-                                <div class="text-danger">
-                                    {% for error in field.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                    {% endfor %}
-                    <button type="submit" class="btn btn-primary">Log Performance</button>
+                    
+                    <div class="mb-3">
+                        <label for="id_activity_type" class="form-label">Activity Type</label>
+                        <input type="text" name="activity_type" class="form-control" id="id_activity_type" placeholder="e.g., Running, Swimming, Weight Training" required>
+                        <div class="form-text">Specify the type of activity you performed.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_duration" class="form-label">Duration (minutes)</label>
+                        <input type="number" name="duration" class="form-control" id="id_duration" min="0" step="0.1" required>
+                        <div class="form-text">How long did the activity last (in minutes)?</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_intensity_level" class="form-label">Intensity Level</label>
+                        <select name="intensity_level" class="form-select" id="id_intensity_level" required>
+                            <option value="" selected disabled>Select intensity level</option>
+                            <option value="1">1 - Very light activity</option>
+                            <option value="2">2 - Light activity</option>
+                            <option value="3">3 - Moderate activity</option>
+                            <option value="4">4 - Moderate to hard</option>
+                            <option value="5">5 - Somewhat hard</option>
+                            <option value="6">6 - Hard activity</option>
+                            <option value="7">7 - Very hard</option>
+                            <option value="8">8 - Very hard to intense</option>
+                            <option value="9">9 - Extremely intense</option>
+                            <option value="10">10 - Maximum effort</option>
+                        </select>
+                        <div class="form-text">Rate the intensity of your activity on a scale of 1-10.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_notes" class="form-label">Notes</label>
+                        <textarea name="notes" class="form-control" id="id_notes" rows="4" placeholder="Add any additional notes about your performance..."></textarea>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i> Save Performance Log
+                        </button>
+                        <a href="{% url 'performance_history' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-1"></i> Back to Performance History
+                        </a>
+                    </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Form validation before submission
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function(event) {
+            if (!this.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            this.classList.add('was-validated');
+        });
+    });
+</script>
 {% endblock %}

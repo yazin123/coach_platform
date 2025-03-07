@@ -1,0 +1,80 @@
+<!-- templates/training/create_session.html -->
+{% extends 'base.html' %}
+
+{% block title %}Create Training Session{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">Create Training Session</div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="{{ form.athlete.id_for_label }}" class="form-label">Select Athlete</label>
+                        {{ form.athlete }}
+                        {% if form.athlete.errors %}
+                            <div class="text-danger">
+                                {% for error in form.athlete.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.session_date.id_for_label }}" class="form-label">Session Date</label>
+                        {{ form.session_date }}
+                        {% if form.session_date.errors %}
+                            <div class="text-danger">
+                                {% for error in form.session_date.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.session_type.id_for_label }}" class="form-label">Session Type</label>
+                        {{ form.session_type }}
+                        {% if form.session_type.errors %}
+                            <div class="text-danger">
+                                {% for error in form.session_type.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="text-danger">
+                                {% for error in form.description.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.status.id_for_label }}" class="form-label">Status</label>
+                        {{ form.status }}
+                        {% if form.status.errors %}
+                            <div class="text-danger">
+                                {% for error in form.status.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Create Session</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
